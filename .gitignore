@@ -8,7 +8,16 @@ __pycache__/
 .env.*
 !.env.example
 .openclaw/
+.personal-os/
 generated_runtime/.tmp/
+/*.db
+/*.sqlite*
+/USER.md
+/MEMORY.md
+/memory/
+/credentials/
+/sessions/
+/scheduler/
+/targets.toml
 *.local.*
 *.private.*
-

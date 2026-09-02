@@ -22,6 +22,7 @@ Private user data stays outside this repository:
 ```powershell
 python scripts/generate_openclaw_surface.py
 python scripts/generate_openclaw_surface.py --check
+python scripts/validate_repo_contracts.py
 ```
 
 Install generated files into an OpenClaw workspace without touching private
@@ -32,4 +33,3 @@ python scripts/generate_openclaw_surface.py --install-dir "$HOME/.openclaw/works
 ```
 
 Edit canonical sources only. Never edit `generated_runtime/openclaw/` directly.
-
