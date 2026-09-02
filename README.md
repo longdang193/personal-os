@@ -6,7 +6,7 @@ Personal Chief of Staff policy and runtime projection source.
 
 - `docs/operating_system/`: canonical policy and procedures
 - `.agents/skills/`: canonical personal-agent skills
-- `repo_config/`: machine-readable identity and runtime boundary
+- `repo_config/`: machine-readable identity, runtime boundary, and tool registry
 - `generated_runtime/openclaw/`: generated, reviewable OpenClaw surface
 - `scripts/`: generation and validation tools
 
@@ -33,3 +33,6 @@ python scripts/generate_openclaw_surface.py --install-dir "$HOME/.openclaw/works
 ```
 
 Edit canonical sources only. Never edit `generated_runtime/openclaw/` directly.
+
+Tool identities and capability mappings live in `repo_config/tool_registry.toml`;
+credentials and provider runtime configuration stay outside Git.

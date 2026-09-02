@@ -17,14 +17,31 @@ class ValidateRepoContractsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             copy_root = Path(directory) / "repo"
             shutil.copytree(ROOT, copy_root, ignore=shutil.ignore_patterns(".git", ".serena", "__pycache__"))
-            shutil.rmtree(copy_root / ".agents" / "skills" / "skill-mail-review")
+            shutil.rmtree(copy_root / ".agents" / "skills" / "skill-mail-management")
 
             drift = generator.sync_repo(copy_root, check=True)
 
-            stale_path = "generated_runtime/openclaw/skills/skill-mail-review/SKILL.md"
+            stale_path = "generated_runtime/openclaw/skills/skill-mail-management/SKILL.md"
             self.assertIn(stale_path, drift)
             generator.sync_repo(copy_root, check=False)
             self.assertFalse((copy_root / stale_path).exists())
+
+    def test_tool_registry_rejects_duplicate_ids_and_unknown_capabilities(self):
+        registry = {
+            "version": 1,
+            "capabilities": ["mail.read"],
+            "tools": [
+                {"id": "mail", "domains": ["mail"], "capabilities": ["mail.read"]},
+                {"id": "mail", "domains": ["mail"], "capabilities": ["mail.send"]},
+            ],
+            "accounts": [{"id": "gmail", "domain": "mail", "tool": "missing"}],
+        }
+
+        issues = validator.tool_registry_issues(registry)
+
+        self.assertIn("tool IDs must be unique", issues)
+        self.assertIn("tool mail references unknown capability: mail.send", issues)
+        self.assertIn("account gmail references unknown tool: missing", issues)
 
     def test_protected_paths_cannot_be_tracked(self):
         manifest = json.loads(

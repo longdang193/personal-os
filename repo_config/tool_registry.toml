@@ -1,0 +1,80 @@
+version = 1
+capabilities = [
+  "mail.read",
+  "mail.search",
+  "mail.draft",
+  "mail.send",
+  "mail.archive",
+  "calendar.read",
+  "calendar.search",
+  "calendar.free_busy",
+  "calendar.write",
+  "reminder.create",
+  "reminder.update",
+  "reminder.cancel",
+  "social.ingest",
+  "browser.interact"
+]
+
+[[tools]]
+id = "google-workspace"
+domains = ["mail", "calendar", "drive"]
+capabilities = [
+  "mail.read",
+  "mail.search",
+  "mail.draft",
+  "mail.send",
+  "mail.archive",
+  "calendar.read",
+  "calendar.search",
+  "calendar.free_busy",
+  "calendar.write"
+]
+auth = "provider-native"
+status = "planned"
+
+[[tools]]
+id = "himalaya"
+domains = ["mail"]
+capabilities = [
+  "mail.read",
+  "mail.search",
+  "mail.draft",
+  "mail.send",
+  "mail.archive"
+]
+auth = "local-provider-auth"
+status = "planned"
+
+[[tools]]
+id = "openclaw-scheduler"
+domains = ["reminder"]
+capabilities = ["reminder.create", "reminder.update", "reminder.cancel"]
+status = "runtime"
+
+[[tools]]
+id = "apify"
+domains = ["social"]
+capabilities = ["social.ingest"]
+status = "planned"
+
+[[tools]]
+id = "browser-use"
+domains = ["fallback"]
+capabilities = ["browser.interact"]
+status = "external"
+
+[[accounts]]
+id = "gmail"
+domain = "mail"
+tool = "google-workspace"
+
+[[accounts]]
+id = "ovgu"
+domain = "mail"
+tool = "himalaya"
+
+[[accounts]]
+id = "google-calendar"
+domain = "calendar"
+tool = "google-workspace"

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
+import tomllib
 from pathlib import Path
 
 import generate_openclaw_surface as generator
@@ -25,6 +27,8 @@ REQUIRED_PROTECTED_PATHS = {
     "sessions",
     "scheduler",
 }
+TOOL_REGISTRY_PATH = "repo_config/tool_registry.toml"
+CAPABILITY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*\.[a-z][a-z0-9_-]*$")
 
 
 def manifest_issues(manifest: object) -> list[str]:
@@ -130,6 +134,75 @@ def skill_issues(root: Path) -> list[str]:
     return issues
 
 
+def tool_registry_issues(registry: object) -> list[str]:
+    if not isinstance(registry, dict):
+        return ["tool registry must be an object"]
+    issues: list[str] = []
+    catalog = registry.get("capabilities")
+    if not isinstance(catalog, list) or not all(isinstance(value, str) for value in catalog):
+        issues.append("tool registry capabilities must be a list of strings")
+        catalog = []
+    if len(catalog) != len(set(catalog)):
+        issues.append("tool registry capabilities must be unique")
+    for capability in catalog:
+        if not CAPABILITY_PATTERN.fullmatch(capability):
+            issues.append(f"tool registry contains invalid capability: {capability}")
+
+    tools = registry.get("tools")
+    if not isinstance(tools, list):
+        return issues + ["tool registry tools must be a list"]
+    tool_ids: list[str] = []
+    for tool in tools:
+        if not isinstance(tool, dict):
+            issues.append("tool registry tool entries must be objects")
+            continue
+        tool_id = tool.get("id")
+        if not isinstance(tool_id, str) or not tool_id:
+            issues.append("tool registry tool is missing id")
+            continue
+        tool_ids.append(tool_id)
+        for field in ("domains", "capabilities"):
+            values = tool.get(field)
+            if not isinstance(values, list) or not all(isinstance(value, str) and value for value in values):
+                issues.append(f"tool {tool_id} {field} must be a list of strings")
+        capabilities = tool.get("capabilities", [])
+        if isinstance(capabilities, list):
+            for capability in capabilities:
+                if capability not in catalog:
+                    issues.append(f"tool {tool_id} references unknown capability: {capability}")
+    if len(tool_ids) != len(set(tool_ids)):
+        issues.append("tool IDs must be unique")
+
+    accounts = registry.get("accounts", [])
+    if not isinstance(accounts, list):
+        return issues + ["tool registry accounts must be a list"]
+    account_ids: list[str] = []
+    for account in accounts:
+        if not isinstance(account, dict):
+            issues.append("tool registry account entries must be objects")
+            continue
+        account_id = account.get("id")
+        if not isinstance(account_id, str) or not account_id:
+            issues.append("tool registry account is missing id")
+            continue
+        account_ids.append(account_id)
+        tool_id = account.get("tool")
+        if tool_id not in tool_ids:
+            issues.append(f"account {account_id} references unknown tool: {tool_id}")
+    if len(account_ids) != len(set(account_ids)):
+        issues.append("account IDs must be unique")
+    return issues
+
+
+def tool_registry_file_issues(root: Path) -> list[str]:
+    path = root / TOOL_REGISTRY_PATH
+    try:
+        registry = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as error:
+        return [f"cannot read tool registry: {error}"]
+    return tool_registry_issues(registry)
+
+
 def validate_repo(root: Path) -> list[str]:
     issues: list[str] = []
     manifest_path = root / "repo_config" / "runtime_surface_manifest.json"
@@ -145,6 +218,7 @@ def validate_repo(root: Path) -> list[str]:
             issues.append(f"cannot inspect tracked paths: {error}")
     try:
         issues.extend(skill_issues(root))
+        issues.extend(tool_registry_file_issues(root))
         issues.extend(generator.sync_repo(root, check=True))
     except (OSError, ValueError) as error:
         issues.append(f"cannot validate generated surface: {error}")
