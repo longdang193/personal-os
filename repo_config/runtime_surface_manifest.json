@@ -1,0 +1,15 @@
+{
+  "runtime": "openclaw",
+  "generatedRoot": "generated_runtime/openclaw",
+  "managedFiles": ["AGENTS.md", "SOUL.md", "IDENTITY.md"],
+  "managedDirectories": ["skills"],
+  "protectedPaths": [
+    "USER.md",
+    "MEMORY.md",
+    "memory",
+    "credentials",
+    "sessions",
+    "scheduler"
+  ]
+}
+
