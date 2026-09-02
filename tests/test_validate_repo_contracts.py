@@ -34,14 +34,40 @@ class ValidateRepoContractsTests(unittest.TestCase):
                 {"id": "mail", "domains": ["mail"], "capabilities": ["mail.read"]},
                 {"id": "mail", "domains": ["mail"], "capabilities": ["mail.send"]},
             ],
-            "accounts": [{"id": "gmail", "domain": "mail", "tool": "missing"}],
+            "accounts": [{"id": "personal", "domain": "mail", "tool": "missing"}],
         }
 
         issues = validator.tool_registry_issues(registry)
 
         self.assertIn("tool IDs must be unique", issues)
         self.assertIn("tool mail references unknown capability: mail.send", issues)
-        self.assertIn("account gmail references unknown tool: missing", issues)
+        self.assertIn("account personal references unknown tool: missing", issues)
+
+    def test_mail_skill_defines_read_only_digest_mode(self):
+        skill = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("/skill skill-mail-management digest", skill)
+        self.assertIn("Keep digest mode read-only", skill)
+        self.assertIn("Fetch metadata first", skill)
+
+    def test_cross_skill_handoff_contracts_preserve_boundaries(self):
+        mail = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        chief_of_staff = (ROOT / ".agents" / "skills" / "skill-personal-chief-of-staff" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        routing = (ROOT / ".agents" / "skills" / "skill-personal-routing" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Use session-scoped IDs", mail)
+        self.assertIn("never call another skill directly", mail)
+        self.assertIn("Preview and confirm batch", chief_of_staff)
+        self.assertIn("project acceptance and evidence requirements", routing)
+        self.assertNotIn("acceptance evidence", routing)
 
     def test_protected_paths_cannot_be_tracked(self):
         manifest = json.loads(

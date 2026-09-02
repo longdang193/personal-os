@@ -65,12 +65,12 @@ capabilities = ["browser.interact"]
 status = "external"
 
 [[accounts]]
-id = "gmail"
+id = "personal"
 domain = "mail"
 tool = "google-workspace"
 
 [[accounts]]
-id = "ovgu"
+id = "student"
 domain = "mail"
 tool = "himalaya"
 
