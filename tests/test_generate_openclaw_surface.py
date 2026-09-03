@@ -18,7 +18,12 @@ class GenerateOpenClawSurfaceTests(unittest.TestCase):
         managed = set(manifest["managedFiles"]) | set(manifest["managedDirectories"])
         self.assertTrue(set(manifest["protectedPaths"]).isdisjoint(managed))
 
+    def test_runtime_registry_is_projected(self):
+        registry = (ROOT / "generated_runtime" / "openclaw" / "TOOL_REGISTRY.toml").read_text()
+        self.assertIn('id = "himalaya"', registry)
+        self.assertIn('status = "runtime"', registry)
+        self.assertIn('read_only = true', registry)
+
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -52,6 +52,14 @@ class ValidateRepoContractsTests(unittest.TestCase):
         self.assertIn("Keep digest mode read-only", skill)
         self.assertIn("Fetch metadata first", skill)
 
+    def test_student_mail_provider_is_read_only(self):
+        skill = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Use `himalaya_mail` with only `list`, `search`, or `read` actions.", skill)
+        self.assertIn("Treat `student` mail as read-only", skill)
+
     def test_cross_skill_handoff_contracts_preserve_boundaries(self):
         mail = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
             encoding="utf-8"
