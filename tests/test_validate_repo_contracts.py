@@ -89,6 +89,8 @@ class ValidateRepoContractsTests(unittest.TestCase):
         self.assertIn("content.watch", registry["capabilities"])
         self.assertEqual(apify["domains"], ["content"])
         self.assertEqual(apify["capabilities"], ["content.watch"])
+        self.assertEqual(apify["status"], "runtime")
+        self.assertTrue(apify["read_only"])
         rss_poller = next(tool for tool in registry["tools"] if tool["id"] == "rss-poller")
         self.assertEqual(rss_poller["status"], "runtime")
         self.assertTrue(rss_poller["read_only"])

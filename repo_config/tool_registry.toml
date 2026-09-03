@@ -57,7 +57,10 @@ status = "runtime"
 id = "apify"
 domains = ["content"]
 capabilities = ["content.watch"]
-status = "planned"
+status = "runtime"
+runtime = "openclaw"
+command = "python3 scripts/poll_content_updates.py"
+read_only = true
 
 [[tools]]
 id = "rss-poller"

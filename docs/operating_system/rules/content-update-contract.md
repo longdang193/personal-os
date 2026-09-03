@@ -41,11 +41,12 @@ dedupe storage until duplicate delivery becomes a measured problem.
 - Handoffs use semantic targets such as `calendar`, `reminder`, `project`, or `browser`.
 - Writes require the owning skill's authorization rules; review itself stays read-only.
 
-## Local RSS Path
+## Local Content Path
 
-The stdlib-only `scripts/poll_content_updates.py` fetches configured RSS feeds,
-normalizes items to `content.update.v1`, and stores only bounded seen-event state
-outside Git. Configure sources in `~/.personal-os/watch_sources.toml`, then run:
+The stdlib-only `scripts/poll_content_updates.py` fetches configured RSS and
+Apify Instagram sources, normalizes items to `content.update.v1`, and stores
+only bounded seen-event state outside Git. Configure sources in
+`~/.personal-os/watch_sources.toml`, then run:
 
 ```powershell
 python3 scripts/poll_content_updates.py --source-id ovgu-fww-news --bootstrap
@@ -54,3 +55,8 @@ python3 scripts/poll_content_updates.py --source-id ovgu-fww-news --bootstrap
 Use `--bootstrap` once to record existing items without notifying. Later runs
 emit one JSON event per unseen item for OpenClaw review. The poller does not
 send mail, change calendar state, or perform source actions.
+
+Apify Instagram sources use `provider = "apify"`, `platform = "instagram"`,
+and one `target` username or profile URL per source. All enabled Apify sources
+are fetched in one Actor call. Set `APIFY_TOKEN` in the local `.env` file or
+process environment; never commit it.
