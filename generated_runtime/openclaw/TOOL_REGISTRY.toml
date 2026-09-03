@@ -17,7 +17,7 @@ capabilities = [
   "reminder.create",
   "reminder.update",
   "reminder.cancel",
-  "social.ingest",
+  "content.watch",
   "browser.interact"
 ]
 
@@ -60,9 +60,18 @@ status = "runtime"
 
 [[tools]]
 id = "apify"
-domains = ["social"]
-capabilities = ["social.ingest"]
+domains = ["content"]
+capabilities = ["content.watch"]
 status = "planned"
+
+[[tools]]
+id = "rss-poller"
+domains = ["content"]
+capabilities = ["content.watch"]
+status = "runtime"
+runtime = "openclaw"
+command = "python3 scripts/poll_content_updates.py"
+read_only = true
 
 [[tools]]
 id = "browser-use"

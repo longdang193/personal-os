@@ -2,6 +2,7 @@ import json
 import shutil
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -76,6 +77,26 @@ class ValidateRepoContractsTests(unittest.TestCase):
         self.assertIn("Preview and confirm batch", chief_of_staff)
         self.assertIn("project acceptance and evidence requirements", routing)
         self.assertNotIn("acceptance evidence", routing)
+
+    def test_content_update_contract_uses_provider_neutral_boundaries(self):
+        registry = tomllib.loads((ROOT / "repo_config" / "tool_registry.toml").read_text(encoding="utf-8"))
+        apify = next(tool for tool in registry["tools"] if tool["id"] == "apify")
+        skill = (ROOT / ".agents" / "skills" / "skill-update-review" / "SKILL.md").read_text(encoding="utf-8")
+        contract = (ROOT / "docs" / "operating_system" / "rules" / "content-update-contract.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("content.watch", registry["capabilities"])
+        self.assertEqual(apify["domains"], ["content"])
+        self.assertEqual(apify["capabilities"], ["content.watch"])
+        rss_poller = next(tool for tool in registry["tools"] if tool["id"] == "rss-poller")
+        self.assertEqual(rss_poller["status"], "runtime")
+        self.assertTrue(rss_poller["read_only"])
+        self.assertIn("content.update.v1", skill)
+        self.assertIn("untrusted data", skill)
+        self.assertIn("target_domain: project", skill)
+        self.assertNotIn("target_domain: personal-routing", skill)
+        self.assertIn("content.update.v1", contract)
 
     def test_protected_paths_cannot_be_tracked(self):
         manifest = json.loads(

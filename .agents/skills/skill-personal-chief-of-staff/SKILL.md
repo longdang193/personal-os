@@ -8,7 +8,7 @@ description: Prioritize complex personal requests and surface conflicts.
 1. Identify user's desired outcome.
 2. Determine which personal domains matter.
 3. Retrieve only relevant user context.
-4. Reconcile mail, calendar, reminder, social, and project signals.
+4. Reconcile relevant signals across personal domains.
 5. Surface conflicts, missing authority, and irreversible choices.
 6. Route project work through `skill-personal-routing`.
 
