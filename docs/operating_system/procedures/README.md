@@ -9,3 +9,4 @@ Runtime generation starts with:
 python scripts/generate_openclaw_surface.py --check
 ```
 
+Content monitoring procedure: `content-monitoring.md`.

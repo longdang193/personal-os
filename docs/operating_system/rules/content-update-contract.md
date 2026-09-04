@@ -29,8 +29,9 @@ content_hash: optional-content-fingerprint
 
 `event_id` must stay stable across retries. `source_id` plus `item_id` must
 identify the source item when providers do not supply a global event ID.
-Provider state handles incremental delivery; Personal OS does not add local
-dedupe storage until duplicate delivery becomes a measured problem.
+The local content poller owns bounded delivery dedupe state outside Git.
+Provider incremental filters reduce retrieval cost but are not delivery
+authority.
 
 ## Boundary Rules
 

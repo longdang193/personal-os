@@ -300,7 +300,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--url")
     parser.add_argument("--state-file", type=Path)
     parser.add_argument("--bootstrap", action="store_true", help="Record current items without emitting them.")
-    parser.add_argument("--timeout", type=int, default=20)
+    parser.add_argument("--rss-timeout", type=int, default=20)
+    parser.add_argument("--apify-timeout", "--timeout", dest="apify_timeout", type=int, default=120)
     parser.add_argument("--max-items", type=int, default=50)
     return parser.parse_args()
 
@@ -332,7 +333,7 @@ def main() -> int:
             source_url = validate_source_url(str(source["url"]))
             state_path = state_path_for(source_id)
             events = build_events(
-                parse_feed(fetch_feed(source_url, args.timeout))[: args.max_items],
+                parse_feed(fetch_feed(source_url, args.rss_timeout))[: args.max_items],
                 source_id,
                 source_url,
                 "rss",
@@ -348,7 +349,13 @@ def main() -> int:
             cutoff = min((value for value in cutoffs if value), default=datetime.now(timezone.utc) - timedelta(days=1))
             token = load_env_value(args.env_file, "APIFY_TOKEN")
             targets = [str(source["target"]) for source in apify_sources]
-            items = fetch_apify_items(targets, cutoff.isoformat().replace("+00:00", "Z"), token, args.max_items, args.timeout)
+            items = fetch_apify_items(
+                targets,
+                cutoff.isoformat().replace("+00:00", "Z"),
+                token,
+                args.max_items,
+                args.apify_timeout,
+            )
             for source in apify_sources:
                 source_id = str(source["id"])
                 target = str(source["target"])

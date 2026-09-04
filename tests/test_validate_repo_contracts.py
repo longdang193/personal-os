@@ -58,8 +58,9 @@ class ValidateRepoContractsTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("Use `himalaya_mail` with only `list`, `search`, or `read` actions.", skill)
-        self.assertIn("Treat `student` mail as read-only", skill)
+        self.assertIn("registered `mail.read` and `mail.search` capabilities", skill)
+        self.assertNotIn("himalaya_mail", skill)
+        self.assertIn("Respect the registered tool's `read_only = true` boundary", skill)
 
     def test_cross_skill_handoff_contracts_preserve_boundaries(self):
         mail = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
@@ -80,20 +81,19 @@ class ValidateRepoContractsTests(unittest.TestCase):
 
     def test_content_update_contract_uses_provider_neutral_boundaries(self):
         registry = tomllib.loads((ROOT / "repo_config" / "tool_registry.toml").read_text(encoding="utf-8"))
-        apify = next(tool for tool in registry["tools"] if tool["id"] == "apify")
+        content_poller = next(tool for tool in registry["tools"] if tool["id"] == "content-poller")
         skill = (ROOT / ".agents" / "skills" / "skill-update-review" / "SKILL.md").read_text(encoding="utf-8")
         contract = (ROOT / "docs" / "operating_system" / "rules" / "content-update-contract.md").read_text(
             encoding="utf-8"
         )
 
         self.assertIn("content.watch", registry["capabilities"])
-        self.assertEqual(apify["domains"], ["content"])
-        self.assertEqual(apify["capabilities"], ["content.watch"])
-        self.assertEqual(apify["status"], "runtime")
-        self.assertTrue(apify["read_only"])
-        rss_poller = next(tool for tool in registry["tools"] if tool["id"] == "rss-poller")
-        self.assertEqual(rss_poller["status"], "runtime")
-        self.assertTrue(rss_poller["read_only"])
+        self.assertEqual(content_poller["domains"], ["content"])
+        self.assertEqual(content_poller["capabilities"], ["content.watch"])
+        self.assertEqual(content_poller["status"], "runtime")
+        self.assertTrue(content_poller["read_only"])
+        self.assertNotIn("apify", {tool["id"] for tool in registry["tools"]})
+        self.assertNotIn("rss-poller", {tool["id"] for tool in registry["tools"]})
         self.assertIn("content.update.v1", skill)
         self.assertIn("untrusted data", skill)
         self.assertIn("target_domain: project", skill)

@@ -41,7 +41,7 @@ provider APIs and from reminder scheduling.
 
 ## Provider Boundary
 
-- Resolve calendar and provider through configured runtime metadata; source registry is `repo_config/tool_registry.toml`.
+- Resolve calendar and provider through `TOOL_REGISTRY.toml` in the runtime workspace. The canonical source is `repo_config/tool_registry.toml`.
 - Use provider-native authentication and local secret stores.
 - Never place provider commands, tokens, credentials, or calendar-specific API syntax in this skill.
 - Do not claim success without provider result evidence.

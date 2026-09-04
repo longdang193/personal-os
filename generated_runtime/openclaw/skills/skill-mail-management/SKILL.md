@@ -103,8 +103,8 @@ User approval for one handoff authorizes only that stated operation. Batch reque
 - Resolve account and provider through `TOOL_REGISTRY.toml` in the runtime workspace.
 - Use only tools marked `status = "runtime"`; do not infer availability from an installed CLI.
 - For the `student` account, use the registered read-only Himalaya capability and provider account `ovgu`.
-- Use `himalaya_mail` with only `list`, `search`, or `read` actions.
-- Treat `student` mail as read-only; do not draft, send, archive, delete, or mark messages read through this account.
+- Use only registered `mail.read` and `mail.search` capabilities for the student account.
+- Respect the registered tool's `read_only = true` boundary; do not draft, send, archive, delete, or mark messages read through this account.
 - Use provider-native authentication and local secret stores.
 - Never place provider commands, tokens, credentials, mailbox paths, or private addresses in this skill.
 - Do not claim success without provider result evidence.
