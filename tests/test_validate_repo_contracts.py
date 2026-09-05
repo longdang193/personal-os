@@ -81,6 +81,7 @@ class ValidateRepoContractsTests(unittest.TestCase):
 
     def test_content_update_contract_uses_provider_neutral_boundaries(self):
         registry = tomllib.loads((ROOT / "repo_config" / "tool_registry.toml").read_text(encoding="utf-8"))
+        google_workspace = next(tool for tool in registry["tools"] if tool["id"] == "google-workspace")
         content_poller = next(tool for tool in registry["tools"] if tool["id"] == "content-poller")
         skill = (ROOT / ".agents" / "skills" / "skill-update-review" / "SKILL.md").read_text(encoding="utf-8")
         contract = (ROOT / "docs" / "operating_system" / "rules" / "content-update-contract.md").read_text(
@@ -88,6 +89,7 @@ class ValidateRepoContractsTests(unittest.TestCase):
         )
 
         self.assertIn("content.watch", registry["capabilities"])
+        self.assertEqual(google_workspace["domains"], ["mail", "calendar"])
         self.assertEqual(content_poller["domains"], ["content"])
         self.assertEqual(content_poller["capabilities"], ["content.watch"])
         self.assertEqual(content_poller["status"], "runtime")

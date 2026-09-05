@@ -23,7 +23,7 @@ capabilities = [
 
 [[tools]]
 id = "google-workspace"
-domains = ["mail", "calendar", "drive"]
+domains = ["mail", "calendar"]
 capabilities = [
   "mail.read",
   "mail.search",
