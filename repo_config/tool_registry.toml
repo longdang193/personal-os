@@ -13,7 +13,9 @@ capabilities = [
   "reminder.update",
   "reminder.cancel",
   "content.watch",
-  "browser.interact"
+  "browser.interact",
+  "knowledge.search",
+  "web.search"
 ]
 
 [[tools]]
@@ -69,6 +71,24 @@ id = "browser-use"
 domains = ["fallback"]
 capabilities = ["browser.interact"]
 status = "external"
+
+[[tools]]
+id = "qmd"
+domains = ["knowledge"]
+capabilities = ["knowledge.search"]
+status = "external"
+runtime = "openclaw"
+command = "qmd mcp"
+read_only = true
+
+[[tools]]
+id = "searxng"
+domains = ["web"]
+capabilities = ["web.search"]
+status = "external"
+runtime = "openclaw"
+provider = "searxng"
+read_only = true
 
 [[accounts]]
 id = "personal"

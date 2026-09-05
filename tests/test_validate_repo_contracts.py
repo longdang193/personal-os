@@ -83,13 +83,21 @@ class ValidateRepoContractsTests(unittest.TestCase):
         registry = tomllib.loads((ROOT / "repo_config" / "tool_registry.toml").read_text(encoding="utf-8"))
         google_workspace = next(tool for tool in registry["tools"] if tool["id"] == "google-workspace")
         content_poller = next(tool for tool in registry["tools"] if tool["id"] == "content-poller")
+        qmd = next(tool for tool in registry["tools"] if tool["id"] == "qmd")
+        searxng = next(tool for tool in registry["tools"] if tool["id"] == "searxng")
         skill = (ROOT / ".agents" / "skills" / "skill-update-review" / "SKILL.md").read_text(encoding="utf-8")
         contract = (ROOT / "docs" / "operating_system" / "rules" / "content-update-contract.md").read_text(
             encoding="utf-8"
         )
 
         self.assertIn("content.watch", registry["capabilities"])
+        self.assertIn("knowledge.search", registry["capabilities"])
+        self.assertIn("web.search", registry["capabilities"])
         self.assertEqual(google_workspace["domains"], ["mail", "calendar"])
+        self.assertEqual(qmd["capabilities"], ["knowledge.search"])
+        self.assertTrue(qmd["read_only"])
+        self.assertEqual(searxng["capabilities"], ["web.search"])
+        self.assertTrue(searxng["read_only"])
         self.assertEqual(content_poller["domains"], ["content"])
         self.assertEqual(content_poller["capabilities"], ["content.watch"])
         self.assertEqual(content_poller["status"], "runtime")
