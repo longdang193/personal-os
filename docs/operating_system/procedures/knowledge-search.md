@@ -5,14 +5,36 @@ web discovery. Neither tool owns Personal OS policy, memory, or source data.
 
 ## Obsidian Collection
 
-Keep the vault path and QMD index outside Git. Set the local vault path, then
-create the allowlisted collection:
+Keep vault path and QMD mask in ignored `.env`, never Git. Add local values:
+
+```dotenv
+OBSIDIAN_VAULT=<absolute vault path>
+OBSIDIAN_QMD_MASK=<comma-separated allowlist>
+```
+
+Load `.env` into the current PowerShell session, then create or update the
+allowlisted collection:
 
 ```powershell
-$env:OBSIDIAN_VAULT = "$HOME\OneDrive\OBSIDIAN 24 09 01\24 09 01 obsidian-go-obsidian_v.0.3.1"
-$mask = "DE/**/*.md,German_New_Words/**/*.md,German_Speaking/**/*.md,ORBA/**/*.md,AI-102/**/*.md,ACT/**/*.md"
-qmd collection add $env:OBSIDIAN_VAULT --name obsidian --mask $mask
+Get-Content .env | ForEach-Object {
+  if ($_ -match '^\s*([^#=]+)\s*=\s*(.*)\s*$') {
+    $value = $matches[2].Trim().Trim('"').Trim("'")
+    Set-Item "Env:$($matches[1].Trim())" $value
+  }
+}
+
+if (-not $env:OBSIDIAN_VAULT -or -not $env:OBSIDIAN_QMD_MASK) {
+  throw "Set OBSIDIAN_VAULT and OBSIDIAN_QMD_MASK in .env."
+}
+
+qmd collection show obsidian
 qmd update
+```
+
+For first setup, replace `qmd collection show obsidian` with:
+
+```powershell
+qmd collection add $env:OBSIDIAN_VAULT --name obsidian --mask $env:OBSIDIAN_QMD_MASK
 ```
 
 Do not index the whole vault. Exclude job files, CVs, letters, Telegram,
