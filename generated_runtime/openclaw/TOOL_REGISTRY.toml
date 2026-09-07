@@ -38,6 +38,19 @@ status = "runtime"
 command = "gws.ps1"
 
 [[tools]]
+id = "calendar-runtime"
+domains = ["calendar"]
+capabilities = [
+  "calendar.read",
+  "calendar.search",
+  "calendar.free_busy",
+  "calendar.write"
+]
+auth = "provider-native"
+status = "runtime"
+command = "python scripts/calendar_mcp_server.py"
+
+[[tools]]
 id = "himalaya"
 domains = ["mail"]
 capabilities = [
@@ -114,4 +127,5 @@ provider_account = "ovgu"
 [[accounts]]
 id = "google-calendar"
 domain = "calendar"
-tool = "google-workspace"
+tool = "calendar-runtime"
+provider = "google-workspace"

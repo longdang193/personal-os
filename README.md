@@ -45,6 +45,10 @@ Mail uses one read-only provider-neutral MCP bridge in both runtimes. It exposes
 server startup. Add mail accounts or providers in `repo_config/tool_registry.toml`,
 regenerate surfaces, then restart both gateways.
 
+Calendar uses one provider-neutral MCP bridge backed by `gws` OAuth. It exposes
+calendar read, search, free/busy, create, update, and cancel operations. OAuth
+credentials stay in the local `gws` store; no calendar token belongs in `.env`.
+
 Set separate Telegram tokens in `.env`:
 
 ```dotenv
