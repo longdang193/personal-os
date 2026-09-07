@@ -6,7 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 if ($Command -in @("start", "restart", "webui")) {
-    . (Join-Path $PSScriptRoot "load_env.ps1") -Names @("TELEGRAM_BOT_TOKEN")
+    . (Join-Path $PSScriptRoot "load_env.ps1") -Names @("NANOBOT_TELEGRAM_BOT_TOKEN")
 }
 
 $arguments = @("gateway")

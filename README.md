@@ -45,7 +45,14 @@ Mail uses one read-only provider-neutral MCP bridge in both runtimes. It exposes
 server startup. Add mail accounts or providers in `repo_config/tool_registry.toml`,
 regenerate surfaces, then restart both gateways.
 
-Nanobot control uses the shared `.env` loader:
+Set separate Telegram tokens in `.env`:
+
+```dotenv
+NANOBOT_TELEGRAM_BOT_TOKEN=<Nanobot token>
+OPENCLAW_TELEGRAM_BOT_TOKEN=<OpenClaw token>
+```
+
+Nanobot control uses `NANOBOT_TELEGRAM_BOT_TOKEN` from shared `.env` loader:
 
 ```powershell
 .\scripts\start_nanobot.ps1
@@ -54,6 +61,9 @@ Nanobot control uses the shared `.env` loader:
 .\scripts\start_nanobot.ps1 status
 .\scripts\start_nanobot.ps1 webui
 ```
+
+OpenClaw must use separate `OPENCLAW_TELEGRAM_BOT_TOKEN` through
+`scripts/start_openclaw.ps1`.
 
 ## Add Runtime
 

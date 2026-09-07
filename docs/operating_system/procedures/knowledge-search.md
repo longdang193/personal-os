@@ -57,5 +57,7 @@ Run from repository root:
 .\scripts\start_nanobot.ps1 webui
 ```
 
-The launcher loads `TELEGRAM_BOT_TOKEN` from `.env` automatically. Use
-`-Foreground` for local debugging.
+Set `NANOBOT_TELEGRAM_BOT_TOKEN` and `OPENCLAW_TELEGRAM_BOT_TOKEN` in `.env`.
+The launcher loads `NANOBOT_TELEGRAM_BOT_TOKEN` automatically. Use
+`-Foreground` for local debugging. OpenClaw uses its token through
+`scripts/start_openclaw.ps1`.
