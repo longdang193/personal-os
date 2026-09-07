@@ -1,6 +1,3 @@
 id = "personal-cos"
 role = "Personal Chief of Staff"
 principal = "owner"
-runtime = "openclaw"
-harness = "codex"
-

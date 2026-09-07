@@ -1,14 +1,19 @@
 {
-  "runtime": "openclaw",
-  "generatedRoot": "generated_runtime/openclaw",
-  "managedFiles": ["AGENTS.md", "SOUL.md", "IDENTITY.md", "TOOL_REGISTRY.toml"],
-  "managedDirectories": ["skills"],
+  "version": 1,
+  "ownership": {
+    "policy": "personal-os",
+    "memory": "runtime-local",
+    "scheduler": "personal-os",
+    "sessions": "runtime",
+    "credentials": "provider"
+  },
   "protectedPaths": [
     "USER.md",
     "MEMORY.md",
     "memory",
     "credentials",
     "sessions",
-    "scheduler"
+    "scheduler",
+    "cron"
   ]
 }

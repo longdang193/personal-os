@@ -1,12 +1,12 @@
 # Content Update Contract
 
 `content.update.v1` is the normalized boundary between external monitoring
-providers, OpenClaw event ingress, and Personal OS review.
+providers, runtime event ingress, and Personal OS review.
 
 ## Ownership
 
 - Watch providers detect changes and emit source events.
-- OpenClaw receives and delivers normalized events.
+- The active runtime receives and delivers normalized events.
 - `skill-update-review` classifies relevance and proposes follow-up actions.
 - Personal Chief of Staff resolves handoffs across personal domains.
 - Calendar, reminder, browser, and project owners perform authorized actions.
@@ -54,7 +54,7 @@ python3 scripts/poll_content_updates.py --source-id ovgu-fww-news --bootstrap
 ```
 
 Use `--bootstrap` once to record existing items without notifying. Later runs
-emit one JSON event per unseen item for OpenClaw review. The poller does not
+emit one JSON event per unseen item for runtime review. The poller does not
 send mail, change calendar state, or perform source actions.
 
 Apify Instagram sources use `provider = "apify"`, `platform = "instagram"`,

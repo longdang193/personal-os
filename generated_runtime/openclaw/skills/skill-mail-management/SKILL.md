@@ -27,7 +27,7 @@ independent from provider commands and authentication details.
 
 ## Digest Mode
 
-Invoke with `/skill skill-mail-management digest` when the user asks for a mail digest, brief, overview, or organized inbox.
+Use `skill-mail-management` in digest mode when the user asks for a mail digest, brief, overview, or organized inbox.
 
 1. Resolve all configured mail accounts unless the user names specific accounts.
 2. Use unread mail or messages received during the last 24 hours by default.
@@ -100,10 +100,11 @@ User approval for one handoff authorizes only that stated operation. Batch reque
 
 ## Provider Boundary
 
-- Resolve account and provider through `TOOL_REGISTRY.toml` in the runtime workspace.
-- Use only tools marked `status = "runtime"`; do not infer availability from an installed CLI.
-- For the `student` account, use the registered read-only Himalaya capability and provider account `ovgu`.
-- Use only registered `mail.read` and `mail.search` capabilities for the student account.
+- Resolve account, runtime tool, provider, and provider account through `TOOL_REGISTRY.toml` in the runtime workspace.
+- Use only the registered `mail-runtime` tool marked `status = "runtime"`; do not infer availability from an installed CLI.
+- The runtime tool exposes only `mail.search` and `mail.read`, and routes each account to its registry provider.
+- For the `student` account, route through registered read-only Himalaya provider account `ovgu`.
+- For the `personal` account, route through registered Google Workspace provider authentication.
 - Respect the registered tool's `read_only = true` boundary; do not draft, send, archive, delete, or mark messages read through this account.
 - Use provider-native authentication and local secret stores.
 - Never place provider commands, tokens, credentials, mailbox paths, or private addresses in this skill.

@@ -49,7 +49,7 @@ class ValidateRepoContractsTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("/skill skill-mail-management digest", skill)
+        self.assertIn("skill-mail-management` in digest mode", skill)
         self.assertIn("Keep digest mode read-only", skill)
         self.assertIn("Fetch metadata first", skill)
 
@@ -58,7 +58,7 @@ class ValidateRepoContractsTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("registered `mail.read` and `mail.search` capabilities", skill)
+        self.assertIn("The runtime tool exposes only `mail.search` and `mail.read`", skill)
         self.assertNotIn("himalaya_mail", skill)
         self.assertIn("Respect the registered tool's `read_only = true` boundary", skill)
 
@@ -89,7 +89,7 @@ class ValidateRepoContractsTests(unittest.TestCase):
         )
 
         self.assertIn("content.watch", registry["capabilities"])
-        self.assertEqual(google_workspace["domains"], ["mail", "calendar"])
+        self.assertEqual(google_workspace["domains"], ["calendar"])
         self.assertEqual(content_poller["domains"], ["content"])
         self.assertEqual(content_poller["capabilities"], ["content.watch"])
         self.assertEqual(content_poller["status"], "runtime")
@@ -125,25 +125,30 @@ class ValidateRepoContractsTests(unittest.TestCase):
 
         self.assertEqual(issues, ["MEMORY.md", "memory/note.md"])
 
+    def test_manifest_keeps_shared_state_ownership_central(self):
+        manifest = json.loads(
+            (ROOT / "repo_config" / "runtime_surface_manifest.json").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(manifest["ownership"]["policy"], "personal-os")
+        self.assertEqual(manifest["ownership"]["memory"], "runtime-local")
+        self.assertEqual(manifest["ownership"]["scheduler"], "personal-os")
+        self.assertEqual(manifest["ownership"]["sessions"], "runtime")
+        self.assertEqual(manifest["ownership"]["credentials"], "provider")
+
     def test_manifest_rejects_path_traversal(self):
         manifest = {
-            "runtime": "openclaw",
-            "generatedRoot": "generated_runtime/openclaw",
-            "managedFiles": ["../MEMORY.md"],
-            "managedDirectories": ["skills"],
-            "protectedPaths": ["MEMORY.md"],
+            "version": 1,
+            "protectedPaths": ["../MEMORY.md"],
         }
 
         issues = validator.manifest_issues(manifest)
 
-        self.assertIn("managedFiles contains unsafe path: ../MEMORY.md", issues)
+        self.assertIn("protectedPaths contains unsafe path: ../MEMORY.md", issues)
 
     def test_manifest_cannot_remove_required_protected_paths(self):
         manifest = {
-            "runtime": "openclaw",
-            "generatedRoot": "generated_runtime/openclaw",
-            "managedFiles": ["AGENTS.md"],
-            "managedDirectories": ["skills"],
+            "version": 1,
             "protectedPaths": ["MEMORY.md"],
         }
 

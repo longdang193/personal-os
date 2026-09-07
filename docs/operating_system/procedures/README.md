@@ -6,7 +6,7 @@ only when a workflow is used more than once or needs explicit evidence.
 Runtime generation starts with:
 
 ```powershell
-python scripts/generate_openclaw_surface.py --check
+python scripts/generate_runtime_surface.py --check
 ```
 
 - Content monitoring: `content-monitoring.md`

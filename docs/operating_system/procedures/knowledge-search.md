@@ -12,20 +12,11 @@ OBSIDIAN_VAULT=<absolute vault path>
 OBSIDIAN_QMD_MASK=<comma-separated allowlist>
 ```
 
-Load `.env` into the current PowerShell session, then create or update the
-allowlisted collection:
+Load required `.env` values into the current PowerShell session, then create or
+update the allowlisted collection:
 
 ```powershell
-Get-Content .env | ForEach-Object {
-  if ($_ -match '^\s*([^#=]+)\s*=\s*(.*)\s*$') {
-    $value = $matches[2].Trim().Trim('"').Trim("'")
-    Set-Item "Env:$($matches[1].Trim())" $value
-  }
-}
-
-if (-not $env:OBSIDIAN_VAULT -or -not $env:OBSIDIAN_QMD_MASK) {
-  throw "Set OBSIDIAN_VAULT and OBSIDIAN_QMD_MASK in .env."
-}
+. .\scripts\load_env.ps1 -Names OBSIDIAN_VAULT, OBSIDIAN_QMD_MASK
 
 qmd collection show obsidian
 qmd update
@@ -47,4 +38,24 @@ read-only until an explicit inbox-only capture contract exists.
 
 - `knowledge.search` uses QMD over the allowlisted Obsidian collection.
 - `web.search` uses the configured SearXNG provider.
-- Native OpenClaw memory stores assistant facts and preferences, not vault copies.
+- Runtime memory stores assistant facts and preferences, not vault copies.
+
+Nanobot starts QMD through `scripts/start_qmd_mcp.ps1`. The launcher loads only
+`OBSIDIAN_VAULT` and `OBSIDIAN_QMD_MASK` from `.env`; it does not pass unrelated
+secrets to QMD.
+
+## Nanobot Control
+
+Run from repository root:
+
+```powershell
+.\scripts\start_nanobot.ps1
+.\scripts\start_nanobot.ps1 restart
+.\scripts\start_nanobot.ps1 stop
+.\scripts\start_nanobot.ps1 status
+.\scripts\start_nanobot.ps1 logs
+.\scripts\start_nanobot.ps1 webui
+```
+
+The launcher loads `TELEGRAM_BOT_TOKEN` from `.env` automatically. Use
+`-Foreground` for local debugging.

@@ -9,14 +9,11 @@ import subprocess
 import tomllib
 from pathlib import Path
 
-import generate_openclaw_surface as generator
+import generate_runtime_surface as generator
 
 
 REQUIRED_MANIFEST_FIELDS = {
-    "runtime",
-    "generatedRoot",
-    "managedFiles",
-    "managedDirectories",
+    "version",
     "protectedPaths",
 }
 REQUIRED_PROTECTED_PATHS = {
@@ -26,6 +23,14 @@ REQUIRED_PROTECTED_PATHS = {
     "credentials",
     "sessions",
     "scheduler",
+    "cron",
+}
+REQUIRED_OWNERSHIP = {
+    "policy": "personal-os",
+    "memory": "runtime-local",
+    "scheduler": "personal-os",
+    "sessions": "runtime",
+    "credentials": "provider",
 }
 TOOL_REGISTRY_PATH = "repo_config/tool_registry.toml"
 CAPABILITY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*\.[a-z][a-z0-9_-]*$")
@@ -38,42 +43,23 @@ def manifest_issues(manifest: object) -> list[str]:
         f"manifest missing field: {field}"
         for field in sorted(REQUIRED_MANIFEST_FIELDS - manifest.keys())
     ]
-    for field in ("generatedRoot",):
-        if field in manifest and not generator.is_safe_manifest_path(manifest[field]):
-            issues.append(f"{field} contains unsafe path: {manifest[field]}")
-    for field in ("managedFiles", "managedDirectories", "protectedPaths"):
-        values = manifest.get(field)
-        if not isinstance(values, list):
-            issues.append(f"{field} must be a list")
-            continue
-        for value in values:
+    ownership = manifest.get("ownership")
+    if not isinstance(ownership, dict):
+        issues.append("ownership must be an object")
+    else:
+        for key, expected_owner in REQUIRED_OWNERSHIP.items():
+            if ownership.get(key) != expected_owner:
+                issues.append(f"ownership {key} must be {expected_owner}")
+    protected_values = manifest.get("protectedPaths")
+    if not isinstance(protected_values, list):
+        issues.append("protectedPaths must be a list")
+    else:
+        for value in protected_values:
             if not generator.is_safe_manifest_path(value):
-                issues.append(f"{field} contains unsafe path: {value}")
-    protected_paths = manifest.get("protectedPaths")
-    if isinstance(protected_paths, list):
-        missing = REQUIRED_PROTECTED_PATHS - {path for path in protected_paths if isinstance(path, str)}
+                issues.append(f"protectedPaths contains unsafe path: {value}")
+    if isinstance(protected_values, list):
+        missing = REQUIRED_PROTECTED_PATHS - {path for path in protected_values if isinstance(path, str)}
         issues.extend(f"manifest missing required protected path: {path}" for path in sorted(missing))
-    if (
-        isinstance(manifest.get("managedFiles"), list)
-        and isinstance(manifest.get("managedDirectories"), list)
-        and all(isinstance(value, str) for value in manifest["managedFiles"] + manifest["managedDirectories"])
-    ):
-        managed = manifest["managedFiles"] + manifest["managedDirectories"]
-        if len(managed) != len(set(managed)):
-            issues.append("managed files and directories must be unique")
-    if (
-        isinstance(manifest.get("managedFiles"), list)
-        and isinstance(manifest.get("managedDirectories"), list)
-        and isinstance(manifest.get("protectedPaths"), list)
-        and all(isinstance(value, str) for value in manifest["managedFiles"] + manifest["managedDirectories"] + manifest["protectedPaths"])
-    ):
-        managed = manifest["managedFiles"] + manifest["managedDirectories"]
-        protected = manifest["protectedPaths"]
-        issues.extend(
-            f"managed path conflicts with protected path: {path}"
-            for path in managed
-            if any(path == item or path.startswith(f"{item}/") for item in protected)
-        )
     return issues
 
 
@@ -161,6 +147,8 @@ def tool_registry_issues(registry: object) -> list[str]:
             issues.append("tool registry tool is missing id")
             continue
         tool_ids.append(tool_id)
+        if "runtime" in tool:
+            issues.append(f"tool {tool_id} must not declare runtime in canonical registry")
         for field in ("domains", "capabilities"):
             values = tool.get(field)
             if not isinstance(values, list) or not all(isinstance(value, str) and value for value in values):

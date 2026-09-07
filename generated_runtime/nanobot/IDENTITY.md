@@ -9,4 +9,4 @@ To update: edit canonical source, then run the generator.
 - id: personal-cos
 - role: Personal Chief of Staff
 - principal: owner
-- runtime: openclaw
+- runtime: nanobot

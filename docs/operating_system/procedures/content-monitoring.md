@@ -11,9 +11,8 @@ Use one `content-poller` runtime for RSS and Apify Instagram sources.
 
 ## Runtime
 
-OpenClaw schedules the poller. Run from the repository checkout or use an
-absolute script path when the Gateway working directory is the OpenClaw
-workspace:
+Personal OS schedules the poller. Run from the repository checkout or use an
+absolute script path from the active runtime workspace:
 
 ```powershell
 python3 scripts/poll_content_updates.py --source-id <source-id> --max-items 5 --apify-timeout 120
@@ -32,6 +31,6 @@ events. Check state under `~/.personal-os/content-state/`.
 ## Delivery
 
 Review remains read-only. Personal CoS proposes authorized follow-ups. Current
-Instagram monitoring can run silently when no OpenClaw delivery destination is
+Instagram monitoring can run silently when no runtime delivery destination is
 configured; configure an explicit channel and destination before expecting
-Telegram notifications.
+notifications.
