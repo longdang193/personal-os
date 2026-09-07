@@ -235,6 +235,32 @@ def _normalize_himalaya(envelope: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _himalaya_body(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n\n".join(text for item in value if (text := _himalaya_body(item)))
+    if isinstance(value, dict):
+        for key in (
+            "message",
+            "body",
+            "text",
+            "content",
+            "plain",
+            "plain_text",
+            "text_body",
+            "Text",
+            "html",
+            "html_body",
+            "Html",
+            "parts",
+        ):
+            text = _himalaya_body(value.get(key))
+            if text:
+                return text
+    return ""
+
+
 def _search_personal(account_name: str, query: str, limit: int) -> dict[str, Any]:
     account = _account_config(account_name)
     if account["provider"] != "google-workspace":
@@ -313,8 +339,7 @@ def _read_student(account_name: str, message_id: str) -> dict[str, Any]:
     if isinstance(result, dict) and isinstance(result.get("message"), dict):
         result = result["message"]
     normalized = _normalize_himalaya(result if isinstance(result, dict) else {})
-    if isinstance(result, dict):
-        normalized["body"] = result.get("body") or result.get("text") or result.get("content")
+    normalized["body"] = _himalaya_body(result)
     return normalized
 
 

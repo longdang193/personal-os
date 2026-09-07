@@ -57,6 +57,26 @@ class MailMcpServerTests(unittest.TestCase):
         self.assertEqual(result["subject"], "Student")
         self.assertEqual(result["flags"], ["Seen"])
 
+    def test_preserves_himalaya_string_message_body(self):
+        self.assertEqual(mail._himalaya_body("Subject: Student\n\nBody"), "Subject: Student\n\nBody")
+
+    def test_extracts_nested_himalaya_body(self):
+        self.assertEqual(mail._himalaya_body({"message": {"body": {"text": "Body"}}}), "Body")
+
+    def test_extracts_himalaya_mime_text_part(self):
+        self.assertEqual(
+            mail._himalaya_body(
+                {
+                    "text_body": [1],
+                    "parts": [
+                        {"body": {"Multipart": [1]}},
+                        {"body": {"Text": "Body"}},
+                    ],
+                }
+            ),
+            "Body",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
