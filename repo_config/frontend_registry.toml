@@ -1,0 +1,21 @@
+version = 1
+edge_protocol = "personal.edge.v1"
+dispatch_protocol = "personal.dispatch.v1"
+event_protocol = "personal.event.v1"
+transport = "local-process"
+owner_principal = "owner"
+
+[[frontends]]
+id = "nanobot"
+runtime = "nanobot"
+role = "edge-relay"
+token_env = "NANOBOT_TELEGRAM_BOT_TOKEN"
+pre_agent_hook = "personal_edge_adapter:handle"
+transport_runner = "codex exec --json --cd <registered-repo> -"
+
+[[frontends]]
+id = "openclaw"
+runtime = "openclaw"
+role = "personal-cos"
+token_env = "OPENCLAW_TELEGRAM_BOT_TOKEN"
+

@@ -1,0 +1,50 @@
+diff --git a/nanobot/channels/base.py b/nanobot/channels/base.py
+index 4dcbbf9..f4decba 100644
+--- a/nanobot/channels/base.py
++++ b/nanobot/channels/base.py
+@@ -2,6 +2,9 @@
+ 
+ from __future__ import annotations
+ 
++import importlib
++import inspect
++import os
+ from abc import ABC, abstractmethod
+ from pathlib import Path
+ from typing import Any
+@@ -44,6 +47,19 @@ class BaseChannel(ABC):
+         self.logger = logger.bind(channel=self.name)
+         self.bus = bus
+         self._running = False
++        self._pre_agent_hook = self._load_pre_agent_hook()
++
++    def _load_pre_agent_hook(self):
++        target = os.environ.get("NANOBOT_PRE_AGENT_HOOK", "").strip()
++        if not target:
++            return None
++        module_name, separator, attribute_name = target.partition(":")
++        if not separator or not module_name or not attribute_name:
++            raise ValueError("NANOBOT_PRE_AGENT_HOOK must use module:callable syntax")
++        hook = getattr(importlib.import_module(module_name), attribute_name, None)
++        if not callable(hook):
++            raise TypeError(f"NANOBOT_PRE_AGENT_HOOK is not callable: {target}")
++        return hook
+ 
+     async def transcribe_audio(self, file_path: str | Path) -> str:
+         """Transcribe an audio file via Whisper (OpenAI or Groq). Returns empty string on failure."""
+@@ -271,6 +287,17 @@ class BaseChannel(ABC):
+             session_key_override=session_key,
+         )
+ 
++        if self._pre_agent_hook is not None:
++            try:
++                handled = self._pre_agent_hook(self, msg)
++                if inspect.isawaitable(handled):
++                    handled = await handled
++            except Exception:
++                self.logger.exception("Pre-agent hook failed")
++                return
++            if handled:
++                return
++
+         await self.bus.publish_inbound(msg)

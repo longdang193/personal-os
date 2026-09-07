@@ -62,6 +62,36 @@ class ValidateRepoContractsTests(unittest.TestCase):
         self.assertNotIn("himalaya_mail", skill)
         self.assertIn("Respect the registered tool's `read_only = true` boundary", skill)
 
+    def test_frontend_registry_requires_edge_hook_and_known_roles(self):
+        registry = {
+            "version": 1,
+            "transport": "local-process",
+            "edge_protocol": "personal.edge.v1",
+            "dispatch_protocol": "personal.dispatch.v1",
+            "event_protocol": "personal.event.v1",
+            "owner_principal": "owner",
+            "frontends": [{
+                "id": "nanobot",
+                "runtime": "nanobot",
+                "role": "edge-relay",
+                "token_env": "NANOBOT_TELEGRAM_BOT_TOKEN",
+            }],
+        }
+        issues = validator.frontend_registry_issues(registry)
+        self.assertIn("frontend nanobot needs module:callable pre_agent_hook", issues)
+
+    def test_project_registry_rejects_paths(self):
+        registry = {
+            "version": 1,
+            "projects": [{
+                "id": "demo",
+                "root_env": "DEMO_ROOT",
+                "root": "C:/secret",
+                "access_modes": ["read"],
+            }],
+        }
+        self.assertIn("project demo must not store root", validator.project_registry_issues(registry))
+
     def test_cross_skill_handoff_contracts_preserve_boundaries(self):
         mail = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
             encoding="utf-8"

@@ -37,16 +37,23 @@ class GenerateOpenClawSurfaceTests(unittest.TestCase):
         self.assertIn('status = "runtime"', registry)
         self.assertIn('read_only = true', registry)
 
-    def test_memory_routing_policy_is_projected_symmetrically(self):
+    def test_nanobot_is_projected_as_edge_only(self):
+        identity = (ROOT / "generated_runtime" / "nanobot" / "IDENTITY.md").read_text(encoding="utf-8")
+        registry = (ROOT / "generated_runtime" / "nanobot" / "TOOL_REGISTRY.toml").read_text(encoding="utf-8")
+        self.assertIn("role: edge-relay", identity)
+        self.assertNotIn("Personal CoS", identity)
+        self.assertIn("capabilities = []", registry)
+        self.assertFalse((ROOT / "generated_runtime" / "nanobot" / "skills").exists())
+
+    def test_memory_routing_policy_stays_with_personal_cos(self):
         expected = (
             "For personal facts, search runtime durable memory and relevant history before `USER.md`.",
             "Treat “I told you before” as an explicit history-search trigger.",
             "Prefer explicit confirmed facts over inferred or template text; report source and confidence when memory is used.",
         )
-        for runtime in ("openclaw", "nanobot"):
-            soul = (ROOT / "generated_runtime" / runtime / "SOUL.md").read_text(encoding="utf-8")
-            for rule in expected:
-                self.assertIn(rule, soul)
+        soul = (ROOT / "generated_runtime" / "openclaw" / "SOUL.md").read_text(encoding="utf-8")
+        for rule in expected:
+            self.assertIn(rule, soul)
 
 
 if __name__ == "__main__":

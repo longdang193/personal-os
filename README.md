@@ -69,6 +69,16 @@ Nanobot control uses `NANOBOT_TELEGRAM_BOT_TOKEN` from shared `.env` loader:
 OpenClaw must use separate `OPENCLAW_TELEGRAM_BOT_TOKEN` through
 `scripts/start_openclaw.ps1`.
 
+Nanobot is relay-only: each Telegram request runs the local
+`scripts/personal_cos_launcher.py`, which invokes
+`codex exec --json --cd <registered-repo> -`. Nanobot does not select agents,
+read Personal OS memory, access repositories, or call Herdr. No CoS URL or auth
+token is configured; Herdr remains internal to CoS and Project OS.
+
+Use `repository_id = personal-os` or `repository_id = job-project` when a
+request targets a registered repository. Roots stay in ignored `.env` through
+`PERSONAL_OS_ROOT` and `JOB_PROJECT_ROOT`.
+
 ## Add Runtime
 
 Add one `adapters/<runtime>/manifest.toml`, then regenerate all surfaces:

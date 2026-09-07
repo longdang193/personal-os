@@ -1,0 +1,12 @@
+version = 1
+
+[[projects]]
+id = "personal-os"
+root_env = "PERSONAL_OS_ROOT"
+access_modes = ["read", "write"]
+
+[[projects]]
+id = "job-project"
+root_env = "JOB_PROJECT_ROOT"
+access_modes = ["read", "write"]
+

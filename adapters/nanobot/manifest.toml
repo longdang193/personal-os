@@ -4,5 +4,5 @@ managedFiles = ["AGENTS.md", "SOUL.md", "IDENTITY.md", "TOOL_REGISTRY.toml"]
 managedDirectories = ["skills"]
 
 [sources]
-"AGENTS.md" = "docs/operating_system/templates/agent/AGENTS.md"
-"SOUL.md" = "docs/operating_system/templates/agent/SOUL.md"
+"AGENTS.md" = "docs/operating_system/templates/edge-relay/AGENTS.md"
+"SOUL.md" = "docs/operating_system/templates/edge-relay/SOUL.md"

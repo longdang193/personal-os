@@ -40,9 +40,9 @@ read-only until an explicit inbox-only capture contract exists.
 - `web.search` uses the configured SearXNG provider.
 - Runtime memory stores assistant facts and preferences, not vault copies.
 
-Nanobot starts QMD through `scripts/start_qmd_mcp.ps1`. The launcher loads only
-`OBSIDIAN_VAULT` and `OBSIDIAN_QMD_MASK` from `.env`; it does not pass unrelated
-secrets to QMD.
+Personal CoS or another approved runtime starts QMD through
+`scripts/start_qmd_mcp.ps1`. Nanobot remains a Telegram relay and does not
+access QMD, Obsidian, or memory directly.
 
 ## Nanobot Control
 

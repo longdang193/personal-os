@@ -33,7 +33,12 @@ REQUIRED_OWNERSHIP = {
     "credentials": "provider",
 }
 TOOL_REGISTRY_PATH = "repo_config/tool_registry.toml"
+FRONTEND_REGISTRY_PATH = "repo_config/frontend_registry.toml"
+PROJECT_REGISTRY_PATH = "repo_config/project_registry.toml"
 CAPABILITY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*\.[a-z][a-z0-9_-]*$")
+ENV_NAME_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
+FRONTEND_ROLES = {"edge-relay", "personal-cos"}
+ACCESS_MODES = {"read", "write"}
 
 
 def manifest_issues(manifest: object) -> list[str]:
@@ -191,6 +196,97 @@ def tool_registry_file_issues(root: Path) -> list[str]:
     return tool_registry_issues(registry)
 
 
+def frontend_registry_issues(registry: object) -> list[str]:
+    if not isinstance(registry, dict):
+        return ["frontend registry must be an object"]
+    issues: list[str] = []
+    if registry.get("version") != 1:
+        issues.append("frontend registry version must be 1")
+    if registry.get("transport") != "local-process":
+        issues.append("frontend registry transport must be local-process")
+    for field in ("edge_protocol", "dispatch_protocol", "event_protocol", "owner_principal"):
+        if not isinstance(registry.get(field), str) or not registry[field]:
+            issues.append(f"frontend registry missing {field}")
+    entries = registry.get("frontends")
+    if not isinstance(entries, list) or not entries:
+        return issues + ["frontend registry frontends must be a non-empty list"]
+    ids: list[str] = []
+    runtimes: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            issues.append("frontend registry entries must be objects")
+            continue
+        frontend_id = entry.get("id")
+        if not isinstance(frontend_id, str) or not frontend_id:
+            issues.append("frontend registry entry is missing id")
+            continue
+        ids.append(frontend_id)
+        runtime = entry.get("runtime")
+        if not isinstance(runtime, str) or not runtime:
+            issues.append(f"frontend {frontend_id} is missing runtime")
+        else:
+            runtimes.append(runtime)
+        if entry.get("role") not in FRONTEND_ROLES:
+            issues.append(f"frontend {frontend_id} has unsupported role")
+        token_env = entry.get("token_env")
+        if not isinstance(token_env, str) or not ENV_NAME_PATTERN.fullmatch(token_env):
+            issues.append(f"frontend {frontend_id} has invalid token environment")
+        if entry.get("role") == "edge-relay":
+            hook = entry.get("pre_agent_hook")
+            if not isinstance(hook, str) or hook.count(":") != 1:
+                issues.append(f"frontend {frontend_id} needs module:callable pre_agent_hook")
+            runner = entry.get("transport_runner")
+            if not isinstance(runner, str) or not runner:
+                issues.append(f"frontend {frontend_id} needs transport_runner")
+    if len(ids) != len(set(ids)):
+        issues.append("frontend IDs must be unique")
+    if len(runtimes) != len(set(runtimes)):
+        issues.append("frontend runtimes must be unique")
+    return issues
+
+
+def project_registry_issues(registry: object) -> list[str]:
+    if not isinstance(registry, dict):
+        return ["project registry must be an object"]
+    issues: list[str] = []
+    if registry.get("version") != 1:
+        issues.append("project registry version must be 1")
+    projects = registry.get("projects")
+    if not isinstance(projects, list) or not projects:
+        return issues + ["project registry projects must be a non-empty list"]
+    ids: list[str] = []
+    for project in projects:
+        if not isinstance(project, dict):
+            issues.append("project registry entries must be objects")
+            continue
+        project_id = project.get("id")
+        if not isinstance(project_id, str) or not project_id:
+            issues.append("project registry entry is missing id")
+            continue
+        ids.append(project_id)
+        root_env = project.get("root_env")
+        if not isinstance(root_env, str) or not ENV_NAME_PATTERN.fullmatch(root_env):
+            issues.append(f"project {project_id} has invalid root_env")
+        modes = project.get("access_modes")
+        if not isinstance(modes, list) or not modes or not set(modes).issubset(ACCESS_MODES):
+            issues.append(f"project {project_id} has invalid access_modes")
+        for field in ("root", "path", "absolute_path"):
+            if field in project:
+                issues.append(f"project {project_id} must not store {field}")
+    if len(ids) != len(set(ids)):
+        issues.append("project IDs must be unique")
+    return issues
+
+
+def _toml_file_issues(root: Path, relative_path: str, validator) -> list[str]:
+    path = root / relative_path
+    try:
+        registry = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as error:
+        return [f"cannot read {relative_path}: {error}"]
+    return validator(registry)
+
+
 def validate_repo(root: Path) -> list[str]:
     issues: list[str] = []
     manifest_path = root / "repo_config" / "runtime_surface_manifest.json"
@@ -207,6 +303,8 @@ def validate_repo(root: Path) -> list[str]:
     try:
         issues.extend(skill_issues(root))
         issues.extend(tool_registry_file_issues(root))
+        issues.extend(_toml_file_issues(root, FRONTEND_REGISTRY_PATH, frontend_registry_issues))
+        issues.extend(_toml_file_issues(root, PROJECT_REGISTRY_PATH, project_registry_issues))
         issues.extend(generator.sync_repo(root, check=True))
     except (OSError, ValueError) as error:
         issues.append(f"cannot validate generated surface: {error}")

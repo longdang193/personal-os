@@ -1,0 +1,56 @@
+diff --git a/nanobot/channels/telegram/runtime.py b/nanobot/channels/telegram/runtime.py
+index 3a80207..e879e6d 100644
+--- a/nanobot/channels/telegram/runtime.py
++++ b/nanobot/channels/telegram/runtime.py
+@@ -3,6 +3,7 @@
+ from __future__ import annotations
+ 
+ import asyncio
++import os
+ import re
+ import time
+ import unicodedata
+@@ -534,23 +535,27 @@ class TelegramChannel(BaseChannel):
+         self._app = builder.build()
+         self._app.add_error_handler(self._on_error)
+ 
+-        # Add command handlers (using Regex to support @username suffixes before bot initialization)
+-        self._app.add_handler(MessageHandler(filters.Regex(r"^/start(?:@\w+)?$"), self._on_start))
+-        self._app.add_handler(
+-            MessageHandler(
+-                filters.Regex(TelegramChannel.TELEGRAM_BUS_SLASH_COMMAND_RE),
+-                self._forward_command,
++        # Relay mode must intercept every command before local command handlers.
++        if os.environ.get("NANOBOT_PRE_AGENT_HOOK", "").strip():
++            self._app.add_handler(MessageHandler(filters.COMMAND, self._forward_command))
++        else:
++            # Add command handlers (using Regex to support @username suffixes before bot initialization)
++            self._app.add_handler(MessageHandler(filters.Regex(r"^/start(?:@\w+)?$"), self._on_start))
++            self._app.add_handler(
++                MessageHandler(
++                    filters.Regex(TelegramChannel.TELEGRAM_BUS_SLASH_COMMAND_RE),
++                    self._forward_command,
++                )
+             )
+-        )
+-        self._app.add_handler(
+-            MessageHandler(
+-                filters.Regex(
+-                    r"^/(dream-log|dream_log|dream-restore|dream_restore|dream-prompt|dream_prompt)(?:@\w+)?(?:\s+.*)?$"
+-                ),
+-                self._forward_command,
++            self._app.add_handler(
++                MessageHandler(
++                    filters.Regex(
++                        r"^/(dream-log|dream_log|dream-restore|dream_restore|dream-prompt|dream_prompt)(?:@\w+)?(?:\s+.*)?$"
++                    ),
++                    self._forward_command,
++                )
+             )
+-        )
+-        self._app.add_handler(MessageHandler(filters.Regex(r"^/help(?:@\w+)?$"), self._on_help))
++            self._app.add_handler(MessageHandler(filters.Regex(r"^/help(?:@\w+)?$"), self._on_help))
+ 
+         # Add message handler for text, photos, video, voice, documents, and locations
+         self._app.add_handler(
+
