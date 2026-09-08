@@ -20,6 +20,7 @@ EVENT_TYPES = {
     "cancelled",
 }
 FORWARDED_METADATA = ("repository_id", "repository_ref", "access_mode")
+DEFAULT_ACCESS_MODE = "write"
 
 
 def request_id(*, channel: str, sender_id: str, chat_id: str, content: str, metadata: Mapping | None) -> str:
@@ -57,6 +58,7 @@ def build_envelope(
     for key in FORWARDED_METADATA:
         if key in metadata:
             envelope[key] = metadata[key]
+    envelope.setdefault("access_mode", DEFAULT_ACCESS_MODE)
     return envelope
 
 

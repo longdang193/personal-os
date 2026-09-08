@@ -64,7 +64,8 @@ Nanobot remains relay-only in this Personal OS repository. Send `Plan today`,
 planner operation. Do not add planner tools or private vault access to the
 generated Nanobot edge surface. The local CoS launcher injects the canonical
 daily-planner skill into each Codex turn; a skill path mention alone is not
-enforcement.
+enforcement. Owner relay requests default to write access; pass explicit
+`access_mode=read` only for read-only probes.
 
 Hermes uses the same canonical `SKILL.md` in its configured local skill
 directory or supported repository installation path. Keep runtime installation

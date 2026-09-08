@@ -56,7 +56,18 @@ class PersonalEdgeAdapterTests(unittest.TestCase):
         self.assertEqual(envelope["request_id"], "telegram-7-42")
         self.assertTrue(envelope["command"])
         self.assertEqual(envelope["repository_id"], "personal-os")
+        self.assertEqual(envelope["access_mode"], "read")
         self.assertNotIn("secret", envelope)
+
+    def test_envelope_defaults_owner_requests_to_write_mode(self):
+        envelope = adapter.build_envelope(
+            channel="telegram",
+            sender_id="owner",
+            chat_id="7",
+            content="add to daily plan: need to learn German today",
+        )
+
+        self.assertEqual(envelope["access_mode"], "write")
 
     def test_event_validation_preserves_request_identity(self):
         event = {
