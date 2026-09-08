@@ -61,8 +61,8 @@ Rules:
 - treat duplicate task text as ambiguous when source note or date differs
 - identify tasks by source path plus exact task text; ask when identity is unclear
 
-Obsidian Tasks is query and status UI. It does not become a second planner
-state store. Daily-note snapshots never become authoritative task copies.
+Obsidian Tasks query blocks are the daily-note presentation layer. They read
+and update source Markdown tasks; do not copy task lines into daily notes.
 
 ## Commands
 
@@ -117,10 +117,16 @@ Use this block shape:
 
 ```markdown
 <!-- daily-planner:managed:start -->
-## Daily Plan
+# Daily Plan — 2026-09-08
 
 ### Top 3
-- Task snapshot or source-note link
+````tasks
+not done
+due today
+sort by priority
+sort by due
+limit 3
+````
 
 ### Schedule
 - 09:00–10:30 Deep work — topic
@@ -129,20 +135,27 @@ Use this block shape:
 - None
 
 ### Carry Forward
-- None
+````tasks
+not done
+due before today
+sort by due
+limit 20
+````
 
 ### Blocked
 - None
 
 ### Evening Review
-- Completed:
-- Carry forward:
-- Blocked:
+- [ ] Record completed work
+- [ ] Confirm carry-forward tasks
+- [ ] Record blocked tasks
 <!-- daily-planner:managed:end -->
 ```
 
-Task snapshots are informational. Completion and rescheduling always target
-the source task, never the snapshot.
+Use official Obsidian Tasks task syntax for every actionable task: `- [ ]`,
+`📅 YYYY-MM-DD`, `🔁` recurrence, and supported priority markers. Use official
+````tasks```` query blocks for live task lists. Never invent query keywords.
+Completion and rescheduling update the source task returned by the query.
 
 ## Authorization
 

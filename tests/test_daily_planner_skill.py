@@ -31,11 +31,14 @@ class DailyPlannerSkillTests(unittest.TestCase):
             "Repeating the same plan must replace one block",
             "never claim a write without result evidence",
             "ask when identity is unclear",
+            "not done\ndue today\nsort by priority\nsort by due\nlimit 3",
+            "Use official Obsidian Tasks task syntax",
         ):
             self.assertIn(phrase, self.skill)
 
         self.assertEqual(self.skill.count("<!-- daily-planner:managed:start -->"), 2)
         self.assertEqual(self.skill.count("<!-- daily-planner:managed:end -->"), 2)
+        self.assertGreaterEqual(self.skill.count("tasks"), 4)
 
     def test_skill_has_no_second_store_or_runtime_install_command(self):
         self.assertIn("Do not create", self.skill)

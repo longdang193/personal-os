@@ -23,8 +23,8 @@ Keep project tasks in their existing project notes. Use Obsidian Tasks syntax:
 - [ ] Submit application 📅 2026-09-12 ⏫
 ```
 
-Source note owns task state. Daily notes contain planning snapshots and
-schedule blocks, not authoritative duplicate tasks.
+Source note owns task state. Daily notes contain schedule blocks and live
+Obsidian Tasks queries, not copied task lines.
 
 ## Runtime Installation
 
@@ -65,6 +65,22 @@ Planner owns only this marker block in each daily note:
 <!-- daily-planner:managed:start -->
 <!-- daily-planner:managed:end -->
 ```
+
+The managed block must use Obsidian Tasks syntax and query blocks:
+
+````markdown
+### Top 3
+```tasks
+not done
+due today
+sort by priority
+sort by due
+limit 3
+```
+````
+
+Query results remain linked to source Markdown tasks. Do not paste query results
+back into daily notes as duplicate checkboxes.
 
 All content outside markers remains user-owned. Multiple marker pairs stop the
 write and produce an ambiguity report.
