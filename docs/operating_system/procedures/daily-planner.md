@@ -5,7 +5,7 @@ Daily Planner uses Obsidian Markdown as single source of truth. Runtime memory,
 
 ## Vault Setup
 
-Set `OBSIDIAN_VAULT_ROOT` in each runtime's private local configuration. Do not
+Set `OBSIDIAN_VAULT` in each runtime's private local configuration. Do not
 store real vault paths, credentials, sessions, or scheduler state in Git.
 
 Create only these folders when they do not already exist:

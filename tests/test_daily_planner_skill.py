@@ -40,6 +40,8 @@ class DailyPlannerSkillTests(unittest.TestCase):
     def test_skill_has_no_second_store_or_runtime_install_command(self):
         self.assertIn("Do not create", self.skill)
         self.assertIn("runtime memory, `~/planner/`", self.skill)
+        self.assertIn("`OBSIDIAN_VAULT`", self.skill)
+        self.assertNotIn("OBSIDIAN_VAULT_ROOT", self.skill)
         for forbidden in ("openclaw skills install", "api_key", "access_token"):
             self.assertNotIn(forbidden, self.skill.lower())
 

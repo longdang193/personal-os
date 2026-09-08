@@ -38,6 +38,14 @@ def project_roots(registry_path: Path = PROJECT_REGISTRY_PATH) -> dict[str, tupl
     }
 
 
+def configured_obsidian_vault() -> Path | None:
+    raw_vault = os.environ.get("OBSIDIAN_VAULT", "").strip() or load_env().get("OBSIDIAN_VAULT", "").strip()
+    if not raw_vault:
+        return None
+    vault = Path(raw_vault).expanduser().resolve()
+    return vault if vault.is_dir() else None
+
+
 def resolve_project_root(envelope: dict[str, Any]) -> tuple[str, Path]:
     project_id = envelope.get("repository_id") or "personal-os"
     if not isinstance(project_id, str):
@@ -119,10 +127,21 @@ def codex_command(root: Path) -> list[str]:
 
 
 def codex_input(envelope: dict[str, Any]) -> str:
+    vault = configured_obsidian_vault()
+    if vault:
+        vault_context = (
+            f"- Obsidian vault root for planner writes is exactly {vault}.\n"
+            "- Keep planner writes under that root only; never use repository root, current working directory, active file path, or developer-provided paths.\n"
+            "- If user says create the folder, create only `<vault>\\Planner` and `<vault>\\Planner\\Inbox.md`; never create a folder beside an active file.\n"
+        )
+    else:
+        vault_context = "- Obsidian vault root is unavailable; planner must not write files.\n"
     return (
         "Personal CoS bootstrap:\n"
         f"- Canonical Personal OS skills live at {SKILL_ROOT}.\n"
         "- Read applicable skills from that path; do not probe user-global skill paths.\n\n"
+        "Planner boundary:\n"
+        f"{vault_context}\n"
         f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}"
     )
 
@@ -140,6 +159,10 @@ def run(envelope: dict[str, Any]) -> int:
     sequence = 0
     emit(event(request_id, sequence, "accepted", f"CoS turn started in {project_id}"))
     sequence += 1
+    child_env = os.environ.copy()
+    configured_vault = configured_obsidian_vault()
+    if configured_vault and "OBSIDIAN_VAULT" not in child_env:
+        child_env["OBSIDIAN_VAULT"] = str(configured_vault)
     process = subprocess.run(
         codex_command(root),
         input=codex_input(envelope),
@@ -149,6 +172,7 @@ def run(envelope: dict[str, Any]) -> int:
         capture_output=True,
         timeout=600,
         check=False,
+        env=child_env,
     )
     final_text = None
     errors: list[str] = []

@@ -106,10 +106,40 @@ class PersonalCosLauncherTests(unittest.TestCase):
 
     def test_codex_input_points_to_canonical_skill_root(self):
         envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "hello"}
-        value = launcher.codex_input(envelope)
+        with patch.object(launcher, "load_env", return_value={"OBSIDIAN_VAULT": str(ROOT)}):
+            value = launcher.codex_input(envelope)
         self.assertIn(str(launcher.SKILL_ROOT), value)
         self.assertIn("do not probe user-global skill paths", value)
+        self.assertIn(f"Obsidian vault root for planner writes is exactly {ROOT}", value)
+        self.assertIn("never use repository root, current working directory, active file path", value)
+        self.assertIn("create only `<vault>\\Planner`", value)
         self.assertIn('"request_id": "request-1"', value)
+
+    def test_codex_input_disables_planner_writes_without_vault(self):
+        envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "Add to my plan"}
+        with patch.dict(launcher.os.environ, {"OBSIDIAN_VAULT": ""}, clear=False), patch.object(launcher, "load_env", return_value={}):
+            value = launcher.codex_input(envelope)
+        self.assertIn("Obsidian vault root is unavailable; planner must not write files.", value)
+
+    def test_run_passes_configured_obsidian_vault_to_cos(self):
+        process = SimpleNamespace(returncode=0, stdout='{"type":"item.completed","item":{"type":"agent_message","text":"ok"}}\n', stderr="")
+        envelope = {
+            "version": "personal.edge.v1",
+            "request_id": "request-1",
+            "text": "Add to my plan",
+            "repository_id": "demo",
+            "access_mode": "read",
+        }
+        vault = ROOT
+        with (
+            patch.object(launcher, "project_roots", return_value={"demo": ("DEMO_ROOT", {"read"})}),
+            patch.dict(launcher.os.environ, {"DEMO_ROOT": str(ROOT)}, clear=False),
+            patch.object(launcher, "load_env", return_value={"OBSIDIAN_VAULT": str(vault)}),
+            patch.object(launcher.subprocess, "run", return_value=process) as run,
+        ):
+            with patch("sys.stdout", new_callable=io.StringIO):
+                self.assertEqual(launcher.run(envelope), 0)
+        self.assertEqual(run.call_args.kwargs["env"]["OBSIDIAN_VAULT"], str(vault))
 
     def test_run_reports_failure_when_codex_output_is_unavailable(self):
         process = SimpleNamespace(returncode=1, stdout=None, stderr=None)

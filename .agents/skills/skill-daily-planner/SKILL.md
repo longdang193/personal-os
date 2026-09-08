@@ -14,14 +14,15 @@ Resolve these before planning:
 
 - current local date and time
 - explicit IANA timezone from runtime configuration
-- `OBSIDIAN_VAULT_ROOT` from runtime-local configuration
+- `OBSIDIAN_VAULT` from runtime-local configuration
 - open tasks and commitments in the vault
 - calendar events and free time when calendar read capability exists
 - user constraints such as available hours, energy, location, and fixed work
 
 If vault access is unavailable, return a read-only plan from supplied context
 and state that no Obsidian write occurred. If timezone is missing, ask for it;
-never infer it from machine location.
+never infer it from machine location. Never use repository root, current working
+directory, active file path, or a developer-provided path as vault root.
 
 ## SSOT Layout
 
@@ -34,6 +35,11 @@ Use these vault-relative paths:
 
 Do not move tasks into a central task file merely to make planning easier.
 Search existing project notes first and preserve source-note ownership.
+
+If `Planner/` or `Planner/Inbox.md` is missing, create only those paths inside
+the resolved `OBSIDIAN_VAULT`. Do not create a folder relative to repository
+root, current working directory, active file path, or any developer-provided
+path. If the resolved vault is missing or not a directory, stop without writes.
 
 ## Task Contract
 
