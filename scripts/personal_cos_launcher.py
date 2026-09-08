@@ -80,7 +80,10 @@ def emit(value: dict[str, Any]) -> None:
     print(json.dumps(value, ensure_ascii=True), flush=True)
 
 
-def codex_command(root: Path) -> list[str]:
+def codex_command(root: Path, *, access_mode: str = "write") -> list[str]:
+    if access_mode not in ACCESS_MODES:
+        raise ValueError(f"unsupported access_mode: {access_mode}")
+    sandbox = "read-only" if access_mode == "read" else "workspace-write"
     command = [
         "codex",
         "exec",
@@ -90,6 +93,8 @@ def codex_command(root: Path) -> list[str]:
         'model="combo-normal"',
         "-c",
         'model_reasoning_effort="low"',
+        "--sandbox",
+        sandbox,
     ]
     config_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser()
     config_path = config_home / "config.toml"
@@ -122,6 +127,9 @@ def codex_command(root: Path) -> list[str]:
             f"cwd={json.dumps(str(ROOT))},enabled=true}}"
         )
         command.extend(["-c", mcp])
+    vault = configured_obsidian_vault()
+    if vault and access_mode == "write":
+        command.extend(["--add-dir", str(vault)])
     command.extend(["--cd", str(root), "-"])
     return command
 
@@ -137,8 +145,8 @@ def codex_input(envelope: dict[str, Any]) -> str:
         vault_context = (
             f"- Obsidian vault root for planner writes is exactly {vault}.\n"
             "- Keep planner writes under that root only; never use repository root, current working directory, active file path, or developer-provided paths.\n"
-            "- If user says create the folder, create only `<vault>\\Planner` and `<vault>\\Planner\\Inbox.md`; never create a folder beside an active file.\n"
-            "- Canonical planner paths: `<vault>\\Planner\\Inbox.md` for captured tasks and `<vault>\\Daily\\YYYY-MM-DD.md` for saved daily plans.\n"
+            "- If user says create the folder, create only `<vault>\\Daily` and `<vault>\\Daily\\YYYY-MM-DD.md`; never create a folder beside an active file.\n"
+            "- Canonical planner path: `<vault>\\Daily\\YYYY-MM-DD.md` for captured tasks and saved daily plans.\n"
         )
     else:
         vault_context = "- Obsidian vault root is unavailable; planner must not write files.\n"
@@ -148,6 +156,7 @@ def codex_input(envelope: dict[str, Any]) -> str:
         "- Read applicable skills from that path; do not probe user-global skill paths.\n\n"
         "Planner boundary:\n"
         f"{vault_context}\n"
+        f"Access mode: {envelope.get('access_mode', 'read')}. Read mode forbids all file and external writes.\n\n"
         f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}\n\n"
         "Mandatory applicable skill: skill-daily-planner\n"
         "Follow this canonical skill for planning, task, daily-note, calendar, "
@@ -179,7 +188,7 @@ def run(envelope: dict[str, Any]) -> int:
     if configured_vault and "OBSIDIAN_VAULT" not in child_env:
         child_env["OBSIDIAN_VAULT"] = str(configured_vault)
     process = subprocess.run(
-        codex_command(root),
+        codex_command(root, access_mode=envelope.get("access_mode", "read")),
         input=codex_input(envelope),
         text=True,
         encoding="utf-8",

@@ -30,23 +30,26 @@ directory, active file path, or a developer-provided path as vault root.
 
 Use these vault-relative paths:
 
-- `Planner/Inbox.md`: uncategorized capture
+- `Daily/YYYY-MM-DD.md`: daily plan and durable task state
 - `Planner/Commitments.md`: work promised to another person or organization
-- `Daily/YYYY-MM-DD.md`: schedule, review, and planning snapshot
 - existing project notes: project-owned tasks
 
-Do not move tasks into a central task file merely to make planning easier.
+Save explicit daily-plan captures in the current `Daily/YYYY-MM-DD.md` note.
+Each calendar day has its own note. Never use one shared `Daily.md` file or
+place one day's tasks in another day's note.
+Do not write captured tasks to `Planner/Inbox.md` or create another task list.
 Search existing project notes first and preserve source-note ownership.
 
-The daily note is the only durable source for schedule and reminder intent.
+The daily note is the only durable source for task, schedule, and reminder intent.
 Google Calendar and the runtime scheduler are projections, not alternate
 sources of truth. External IDs may be stored as hidden comments beside managed
 entries for idempotent updates.
 
-If `Planner/` or `Planner/Inbox.md` is missing, create only those paths inside
-the resolved `OBSIDIAN_VAULT`. Do not create a folder relative to repository
-root, current working directory, active file path, or any developer-provided
-path. If the resolved vault is missing or not a directory, stop without writes.
+If `Daily/` or the current `Daily/YYYY-MM-DD.md` is missing, create only those paths inside
+the resolved `OBSIDIAN_VAULT`, using the configured daily-note template. Do not
+create a folder relative to repository root, current working directory, active
+file path, or any developer-provided path. If the resolved vault is missing or
+not a directory, stop without writes.
 
 ## Task Contract
 
@@ -100,8 +103,9 @@ automatically; show proposed carry-forward first.
 ### Capture
 
 1. Preserve user's wording unless clarification is needed.
-2. Search `Planner/Inbox.md` and relevant source notes for exact duplicates.
-3. Append one checkbox to `Planner/Inbox.md` only after exact-dedupe succeeds.
+2. Search the current `Daily/YYYY-MM-DD.md` and relevant source notes for exact duplicates.
+3. Append one checkbox inside the daily note's managed `### Tasks` section only
+   after exact-dedupe succeeds.
 4. Resolve explicit relative dates before appending. For example, on September
    8, 2026, `Notify roommates; complete today` becomes
    `- [ ] Notify roommates 📅 2026-09-08`.
@@ -122,8 +126,8 @@ was actually supplied and applied. Never report a resolved due date as skipped.
 ## Location Reporting
 
 For planner location questions, use only these canonical paths under
-`OBSIDIAN_VAULT`: `Planner/Inbox.md` for captured tasks and
-`Daily/YYYY-MM-DD.md` for saved daily plans. A location claim requires a write
+`OBSIDIAN_VAULT`: `Daily/YYYY-MM-DD.md` for captured tasks and saved daily plans.
+A location claim requires a write
 operation and verification from the current turn. Never report a path from prior
 context, active workspace, or filesystem search. If current-turn write evidence
 is absent, say `No file write was verified in this turn.` For a planner follow-up,

@@ -11,7 +11,6 @@ store real vault paths, credentials, sessions, or scheduler state in Git.
 Create only these folders when they do not already exist:
 
 ```text
-<vault>/Planner/Inbox.md
 <vault>/Planner/Commitments.md
 <vault>/Daily/
 ```
@@ -26,6 +25,7 @@ Keep project tasks in their existing project notes. Use Obsidian Tasks syntax:
 Relative dates are explicit input. On September 8, 2026, `Notify roommates;
 complete today` is written as `- [ ] Notify roommates 📅 2026-09-08`.
 
+Each calendar day has its own note named `YYYY-MM-DD.md` inside `Daily/`.
 Source note owns task state. Daily notes contain schedule blocks and live
 Obsidian Tasks queries, not copied task lines.
 
@@ -75,7 +75,7 @@ to the configured vault; calendar and reminder capabilities remain optional.
 
 - `Plan today`: preview or save today's managed daily-plan block.
 - `Plan tomorrow`: prepare next day's plan without automatic rescheduling.
-- `Capture <task>`: append one deduplicated checkbox to `Planner/Inbox.md`.
+- `Capture <task>`: append one deduplicated checkbox to current `Daily/YYYY-MM-DD.md`.
 - `Plan review`: report completed, overdue, blocked, and carried-forward work.
 - `Sync today`: preview and, after one confirmation, sync managed schedule
   entries to Google Calendar and reminder entries to the runtime scheduler.

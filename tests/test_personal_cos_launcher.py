@@ -76,6 +76,8 @@ class PersonalCosLauncherTests(unittest.TestCase):
         )
         self.assertEqual(command[-1], "-")
         self.assertIn(str(ROOT), command)
+        self.assertIn("--sandbox", command)
+        self.assertIn("read-only", command)
         self.assertEqual(run.call_args.kwargs["encoding"], "utf-8")
         self.assertEqual(run.call_args.kwargs["errors"], "replace")
 
@@ -114,6 +116,13 @@ class PersonalCosLauncherTests(unittest.TestCase):
         )
         self.assertEqual(command[-3:], ["--cd", str(ROOT), "-"])
 
+    def test_codex_command_read_access_disables_writes(self):
+        with patch.object(launcher, "configured_obsidian_vault", return_value=Path("C:/vault")):
+            command = launcher.codex_command(ROOT, access_mode="read")
+        sandbox_index = command.index("--sandbox")
+        self.assertEqual(command[sandbox_index + 1], "read-only")
+        self.assertNotIn("--add-dir", command)
+
     def test_codex_input_points_to_canonical_skill_root(self):
         envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "hello"}
         with patch.object(launcher, "load_env", return_value={"OBSIDIAN_VAULT": str(ROOT)}):
@@ -122,8 +131,8 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertIn("do not probe user-global skill paths", value)
         self.assertIn(f"Obsidian vault root for planner writes is exactly {ROOT}", value)
         self.assertIn("never use repository root, current working directory, active file path", value)
-        self.assertIn("create only `<vault>\\Planner`", value)
-        self.assertIn("<vault>\\Planner\\Inbox.md` for captured tasks", value)
+        self.assertIn("create only `<vault>\\Daily`", value)
+        self.assertIn("<vault>\\Daily\\YYYY-MM-DD.md` for captured tasks", value)
         self.assertIn('"request_id": "request-1"', value)
 
     def test_codex_input_includes_canonical_daily_planner_skill(self):
@@ -134,7 +143,7 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertIn("Mandatory applicable skill: skill-daily-planner", value)
         self.assertIn(skill, value)
         self.assertIn("Location reporting boundary: never report a path from prior context", value)
-        self.assertIn("Planner/Inbox.md` for captured tasks", value)
+        self.assertIn("Daily/YYYY-MM-DD.md` for captured tasks", value)
         self.assertIn("canonical capture or daily-plan paths only as references", value)
 
     def test_codex_input_disables_planner_writes_without_vault(self):
