@@ -17,6 +17,8 @@ Resolve these before planning:
 - `OBSIDIAN_VAULT` from runtime-local configuration
 - open tasks and commitments in the vault
 - calendar events and free time when calendar read capability exists
+- the target daily note and its managed `Schedule` and `Reminders` sections
+- calendar and reminder capability through the runtime tool registry
 - user constraints such as available hours, energy, location, and fixed work
 
 If vault access is unavailable, return a read-only plan from supplied context
@@ -35,6 +37,11 @@ Use these vault-relative paths:
 
 Do not move tasks into a central task file merely to make planning easier.
 Search existing project notes first and preserve source-note ownership.
+
+The daily note is the only durable source for schedule and reminder intent.
+Google Calendar and the runtime scheduler are projections, not alternate
+sources of truth. External IDs may be stored as hidden comments beside managed
+entries for idempotent updates.
 
 If `Planner/` or `Planner/Inbox.md` is missing, create only those paths inside
 the resolved `OBSIDIAN_VAULT`. Do not create a folder relative to repository
@@ -99,6 +106,30 @@ Report completed, open, overdue, blocked, and carried-forward work from source
 notes. Propose changes; do not bulk move, complete, delete, or reprioritize
 tasks without explicit confirmation.
 
+### Sync today
+
+1. Read only the managed `Daily/YYYY-MM-DD.md` block; do not infer events or
+   reminders from arbitrary prose, task queries, or headings outside the block.
+2. Parse schedule entries using `- YYYY-MM-DD HH:MM–HH:MM | Event title` and
+   reminder entries using `- YYYY-MM-DD HH:MM | Reminder text`.
+3. Require an explicit runtime timezone and target calendar. Reject malformed,
+   ambiguous, or timezone-less entries without writes.
+4. Search existing calendar events and scheduler reminders by stored external
+   ID, then stable source identity. Produce one preview containing creates,
+   updates, unchanged entries, and orphaned external items.
+5. Ask for one confirmation before external writes. Apply only confirmed
+   creates and updates, then write returned IDs beside managed entries.
+
+Store linkage as inline comments: `<!-- personal-os:calendar-id=ID -->` or
+`<!-- personal-os:reminder-id=ID -->`. When replacing a managed plan, preserve
+each linkage comment with its matching normalized entry; never discard it as
+template content.
+
+Removing a source entry does not cancel its external projection automatically;
+report it as orphaned and require confirmation before cancellation. Calendar
+and reminder sync use the same parse, compare, preview, confirm, apply, and
+report lifecycle, while retaining their separate provider semantics.
+
 ## Managed Daily Notes
 
 Own only the content between these exact markers:
@@ -111,7 +142,8 @@ Own only the content between these exact markers:
 Preserve all content outside markers. If markers are absent, append one managed
 block after existing content. If multiple marker pairs exist, stop and report
 ambiguous note structure. Repeating the same plan must replace one block, not
-append duplicates.
+append duplicates. Preserve matching `personal-os:*-id` linkage comments during
+replacement.
 
 Use this block shape:
 
@@ -129,10 +161,17 @@ limit 3
 ````
 
 ### Schedule
-- 09:00–10:30 Deep work — topic
+<!-- Calendar entries:
+- YYYY-MM-DD HH:MM–HH:MM | Event title
+-->
 
 ### Conflicts
 - None
+
+### Reminders
+<!-- Reminder entries:
+- YYYY-MM-DD HH:MM | Reminder text
+-->
 
 ### Carry Forward
 ````tasks
@@ -162,10 +201,12 @@ Completion and rescheduling update the source task returned by the query.
 - reading vault tasks and calendar events: automatic when scope is clear
 - saving a managed daily plan: automatic only for explicit request or authorized scheduled run
 - capturing a task: allowed when user explicitly asks to capture it
+- parsing daily-note schedule and reminder intent: automatic for `Sync today`
 - completing, deleting, reprioritizing, assigning dates, changing recurrence,
   or moving tasks: explicit user intent required
 - bulk changes, commitment writes, calendar writes, and external reminders:
-  preview and confirm first
+  preview and confirm first; an explicitly authorized scheduled sync may reuse
+  that authorization for unchanged managed entries
 - never mark work complete because conversation implies completion
 - never claim a write without result evidence
 
@@ -192,3 +233,5 @@ Report the first missing or failed dependency with:
 Never overwrite a note after parse ambiguity, path escape, marker conflict, or
 partial read. Preserve original error context and leave user data unchanged
 when a safe write cannot be proven.
+Never create calendar events or reminders from task-query results or arbitrary
+daily-note prose. Invalid sync entries produce a no-write parse report.

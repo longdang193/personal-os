@@ -33,6 +33,14 @@ class DailyPlannerSkillTests(unittest.TestCase):
             "ask when identity is unclear",
             "not done\ndue today\nsort by priority\nsort by due\nlimit 3",
             "Use official Obsidian Tasks task syntax",
+            "### Sync today",
+            "Google Calendar and the runtime scheduler are projections",
+            "- YYYY-MM-DD HH:MM–HH:MM | Event title",
+            "- YYYY-MM-DD HH:MM | Reminder text",
+            "Removing a source entry does not cancel its external projection automatically",
+            "Never create calendar events or reminders from task-query results",
+            "personal-os:calendar-id=ID",
+            "Preserve matching `personal-os:*-id` linkage comments during",
         ):
             self.assertIn(phrase, self.skill)
 

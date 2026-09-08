@@ -26,6 +26,20 @@ Keep project tasks in their existing project notes. Use Obsidian Tasks syntax:
 Source note owns task state. Daily notes contain schedule blocks and live
 Obsidian Tasks queries, not copied task lines.
 
+Daily notes also own external intent. Keep calendar and reminder entries inside
+the managed block using these exact forms:
+
+```markdown
+### Schedule
+- 2026-09-08 09:00–10:00 | Roommate meeting
+
+### Reminders
+- 2026-09-08 18:00 | Notify roommates
+```
+
+Google Calendar and the runtime scheduler receive projections from these lines;
+they are not second sources of truth.
+
 ## Runtime Installation
 
 Canonical source:
@@ -58,6 +72,8 @@ to the configured vault; calendar and reminder capabilities remain optional.
 - `Plan tomorrow`: prepare next day's plan without automatic rescheduling.
 - `Capture <task>`: append one deduplicated checkbox to `Planner/Inbox.md`.
 - `Plan review`: report completed, overdue, blocked, and carried-forward work.
+- `Sync today`: preview and, after one confirmation, sync managed schedule
+  entries to Google Calendar and reminder entries to the runtime scheduler.
 
 Planner owns only this marker block in each daily note:
 
@@ -82,12 +98,22 @@ limit 3
 Query results remain linked to source Markdown tasks. Do not paste query results
 back into daily notes as duplicate checkboxes.
 
+`Sync today` reads only managed `Schedule` and `Reminders` sections. It uses
+stored external IDs for idempotent updates, reports removed entries as
+orphaned, and never cancels external projections without confirmation. Linkage
+comments use `<!-- personal-os:calendar-id=ID -->` and
+`<!-- personal-os:reminder-id=ID -->`; plan regeneration preserves matching
+comments.
+
 All content outside markers remains user-owned. Multiple marker pairs stop the
 write and produce an ambiguity report.
 
 ## Safety
 
 - Planning reads calendar; it does not create or move calendar events.
+- `Sync today` may create or update explicit managed calendar entries after a
+  single preview confirmation. It never infers events from prose or task
+  query results.
 - Completion, deletion, reprioritization, date changes, recurrence changes,
   bulk moves, commitment writes, and external reminders require explicit user
   intent; preview batch changes before confirmation.
