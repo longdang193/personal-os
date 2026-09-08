@@ -128,6 +128,11 @@ def codex_command(root: Path) -> list[str]:
 
 def codex_input(envelope: dict[str, Any]) -> str:
     vault = configured_obsidian_vault()
+    planner_skill_path = SKILL_ROOT / "skill-daily-planner" / "SKILL.md"
+    try:
+        planner_skill = planner_skill_path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise ValueError(f"canonical daily planner skill unavailable: {error}") from error
     if vault:
         vault_context = (
             f"- Obsidian vault root for planner writes is exactly {vault}.\n"
@@ -142,7 +147,11 @@ def codex_input(envelope: dict[str, Any]) -> str:
         "- Read applicable skills from that path; do not probe user-global skill paths.\n\n"
         "Planner boundary:\n"
         f"{vault_context}\n"
-        f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}"
+        f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}\n\n"
+        "Mandatory applicable skill: skill-daily-planner\n"
+        "Follow this canonical skill for planning, task, daily-note, calendar, "
+        "and reminder requests. Do not replace it with generic behavior.\n"
+        f"{planner_skill}"
     )
 
 

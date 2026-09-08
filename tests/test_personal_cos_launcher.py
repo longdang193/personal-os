@@ -125,6 +125,14 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertIn("create only `<vault>\\Planner`", value)
         self.assertIn('"request_id": "request-1"', value)
 
+    def test_codex_input_includes_canonical_daily_planner_skill(self):
+        envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "Add to my plan"}
+        with patch.object(launcher, "load_env", return_value={}):
+            value = launcher.codex_input(envelope)
+        skill = (ROOT / ".agents" / "skills" / "skill-daily-planner" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Mandatory applicable skill: skill-daily-planner", value)
+        self.assertIn(skill, value)
+
     def test_codex_input_disables_planner_writes_without_vault(self):
         envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "Add to my plan"}
         with patch.dict(launcher.os.environ, {"OBSIDIAN_VAULT": ""}, clear=False), patch.object(launcher, "load_env", return_value={}):

@@ -62,6 +62,11 @@ Rules:
 
 - use `YYYY-MM-DD` for due dates
 - add due date only when user supplied or approved a date
+- relative date phrases such as `today`, `tomorrow`, `yesterday`, and named
+  weekdays attached to task intent count as user-supplied dates; resolve them
+  using the current local date and runtime timezone, then write `YYYY-MM-DD`
+- phrases such as `complete today`, `do today`, and `due today` are explicit
+  due-date input, not inferred urgency
 - use recurrence only when the user requested recurring work
 - use priority only when user supplied or approved priority
 - preserve task text, tags, links, and unrelated metadata
@@ -97,8 +102,22 @@ automatically; show proposed carry-forward first.
 1. Preserve user's wording unless clarification is needed.
 2. Search `Planner/Inbox.md` and relevant source notes for exact duplicates.
 3. Append one checkbox to `Planner/Inbox.md` only after exact-dedupe succeeds.
-4. Do not assign due date, priority, project, or recurrence without user input.
-5. If matching tasks are ambiguous, show candidates and ask one focused question.
+4. Resolve explicit relative dates before appending. For example, on September
+   8, 2026, `Notify roommates; complete today` becomes
+   `- [ ] Notify roommates 📅 2026-09-08`.
+5. Do not assign due date, priority, project, or recurrence without user input.
+6. If a relative date cannot resolve because date or timezone is unavailable,
+   ask one focused question and do not write.
+7. Exact duplicate means same task text after trimming surrounding whitespace
+   only. Do not treat paraphrases as duplicates.
+8. For similar but non-identical text, show the candidate and ask one focused
+   question; never silently rewrite, merge, or claim duplicate.
+9. If exact task exists with missing or different metadata, show the existing
+   line and ask before changing its metadata.
+
+Capture response must state one of: exact existing line unchanged, exact line
+updated after confirmation, or exact new line appended. List only metadata that
+was actually supplied and applied. Never report a resolved due date as skipped.
 
 ### Review
 

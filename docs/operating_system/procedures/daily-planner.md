@@ -23,6 +23,9 @@ Keep project tasks in their existing project notes. Use Obsidian Tasks syntax:
 - [ ] Submit application 📅 2026-09-12 ⏫
 ```
 
+Relative dates are explicit input. On September 8, 2026, `Notify roommates;
+complete today` is written as `- [ ] Notify roommates 📅 2026-09-08`.
+
 Source note owns task state. Daily notes contain schedule blocks and live
 Obsidian Tasks queries, not copied task lines.
 
@@ -59,7 +62,9 @@ python scripts/generate_runtime_surface.py --runtime openclaw --install-dir "$HO
 Nanobot remains relay-only in this Personal OS repository. Send `Plan today`,
 `Capture <task>`, or `Plan review` through Nanobot; Personal CoS performs the
 planner operation. Do not add planner tools or private vault access to the
-generated Nanobot edge surface.
+generated Nanobot edge surface. The local CoS launcher injects the canonical
+daily-planner skill into each Codex turn; a skill path mention alone is not
+enforcement.
 
 Hermes uses the same canonical `SKILL.md` in its configured local skill
 directory or supported repository installation path. Keep runtime installation
