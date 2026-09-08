@@ -1,6 +1,8 @@
 import sys
 import unittest
+import inspect
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +26,19 @@ class MailMcpServerTests(unittest.TestCase):
     def test_registry_owns_mail_provider_mapping(self):
         self.assertEqual(mail._account_config("personal")["provider"], "google-workspace")
         self.assertEqual(mail._account_config("student")["provider_account"], "ovgu")
+
+    def test_digest_search_has_bounded_default(self):
+        self.assertEqual(inspect.signature(mail.mail_search).parameters["limit"].default, 5)
+
+    def test_empty_account_scope_defaults_to_all(self):
+        with patch.object(mail, "_search_one", return_value={"messages": []}) as search:
+            result = mail.mail_search("", "", 1)
+        self.assertEqual(result["accounts"], ["personal", "student"])
+        self.assertEqual(search.call_count, 2)
+
+    def test_himalaya_normalizes_common_gmail_digest_filters(self):
+        query = mail._normalize_himalaya_query("in:inbox newer_than:1d")
+        self.assertEqual(query, f"after {(mail.date.today() - mail.timedelta(days=1)).isoformat()}")
 
     def test_normalizes_gmail_metadata(self):
         result = mail._normalize_gmail(

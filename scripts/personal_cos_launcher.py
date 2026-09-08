@@ -13,6 +13,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT_REGISTRY_PATH = ROOT / "repo_config" / "project_registry.toml"
+TOOL_REGISTRY_PATH = ROOT / "repo_config" / "tool_registry.toml"
+SKILL_ROOT = ROOT / ".agents" / "skills"
 ENV_LINE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$")
 ACCESS_MODES = {"read", "write"}
 
@@ -70,6 +72,61 @@ def emit(value: dict[str, Any]) -> None:
     print(json.dumps(value, ensure_ascii=False), flush=True)
 
 
+def codex_command(root: Path) -> list[str]:
+    command = [
+        "codex",
+        "exec",
+        "--ephemeral",
+        "--json",
+        "-c",
+        'model="combo-normal"',
+        "-c",
+        'model_reasoning_effort="low"',
+    ]
+    config_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).expanduser()
+    config_path = config_home / "config.toml"
+    try:
+        config = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        config = {}
+    mcp_servers = config.get("mcp_servers", {})
+    if isinstance(mcp_servers, dict):
+        for name in mcp_servers:
+            if isinstance(name, str) and re.fullmatch(r"[A-Za-z0-9_-]+", name):
+                command.extend(["-c", f"mcp_servers.{name}.enabled=false"])
+    try:
+        registry = tomllib.loads(TOOL_REGISTRY_PATH.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        registry = {}
+    for tool in registry.get("tools", []):
+        tool_id = tool.get("id") if isinstance(tool, dict) else None
+        tool_command = tool.get("command") if isinstance(tool, dict) else None
+        if not isinstance(tool_id, str) or not tool_id.endswith("-runtime") or not isinstance(tool_command, str):
+            continue
+        parts = tool_command.split(maxsplit=1)
+        if len(parts) != 2 or not parts[1].endswith(".py"):
+            continue
+        server_name = tool_id.removesuffix("-runtime")
+        script = (ROOT / parts[1]).resolve()
+        mcp = (
+            f"mcp_servers.{server_name}="
+            f"{{command={json.dumps(sys.executable)},args=[\"-u\",{json.dumps(str(script))}],"
+            f"cwd={json.dumps(str(ROOT))},enabled=true}}"
+        )
+        command.extend(["-c", mcp])
+    command.extend(["--cd", str(root), "-"])
+    return command
+
+
+def codex_input(envelope: dict[str, Any]) -> str:
+    return (
+        "Personal CoS bootstrap:\n"
+        f"- Canonical Personal OS skills live at {SKILL_ROOT}.\n"
+        "- Read applicable skills from that path; do not probe user-global skill paths.\n\n"
+        f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}"
+    )
+
+
 def run(envelope: dict[str, Any]) -> int:
     request_id = envelope.get("request_id")
     if not isinstance(request_id, str) or not request_id:
@@ -84,16 +141,18 @@ def run(envelope: dict[str, Any]) -> int:
     emit(event(request_id, sequence, "accepted", f"CoS turn started in {project_id}"))
     sequence += 1
     process = subprocess.run(
-        ["codex", "exec", "--json", "--cd", str(root), "-"],
-        input=json.dumps(envelope, ensure_ascii=False),
+        codex_command(root),
+        input=codex_input(envelope),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         timeout=600,
         check=False,
     )
     final_text = None
     errors: list[str] = []
-    for line in process.stdout.splitlines():
+    for line in (process.stdout or "").splitlines():
         try:
             item = json.loads(line)
         except json.JSONDecodeError:
@@ -113,7 +172,7 @@ def run(envelope: dict[str, Any]) -> int:
             errors.append(completed_item["message"])
 
     if process.returncode != 0:
-        detail = process.stderr.strip() or "; ".join(errors) or f"codex exited with {process.returncode}"
+        detail = (process.stderr or "").strip() or "; ".join(errors) or f"codex exited with {process.returncode}"
         emit(event(request_id, sequence, "failed", detail))
         return 0
     if final_text is None:

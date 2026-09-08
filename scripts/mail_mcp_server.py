@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import tomllib
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,8 @@ from mcp.types import ToolAnnotations
 
 
 MAX_LIMIT = 50
+DEFAULT_SEARCH_LIMIT = 5
+PROVIDER_TIMEOUT_SECONDS = 15
 MAX_QUERY_LENGTH = 500
 MESSAGE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_.:-]{1,256}$")
 REGISTRY_PATH = Path(__file__).resolve().parents[1] / "repo_config" / "tool_registry.toml"
@@ -100,7 +103,7 @@ def _command_result(command: list[str]) -> Any:
             text=True,
             encoding="utf-8",
             errors="replace",
-            timeout=60,
+            timeout=PROVIDER_TIMEOUT_SECONDS,
             check=False,
         )
     except FileNotFoundError as error:
@@ -158,10 +161,10 @@ def _himalaya_call(account_name: str, arguments: list[str]) -> Any:
             _himalaya_command(),
             "--account",
             str(account.get("provider_account", "")),
-            *arguments,
             "--json",
             "--log-level",
             "off",
+            *arguments,
         ]
     )
 
@@ -290,12 +293,19 @@ def _search_student(account_name: str, query: str, limit: int) -> dict[str, Any]
     account = _account_config(account_name)
     if account["provider"] != "himalaya":
         raise MailBridgeError("student mail provider is not configured for Himalaya")
-    arguments = ["envelope", "search"]
+    arguments = ["envelope", "search", "--page-size", str(limit)]
+    query = _normalize_himalaya_query(query)
     if query:
         arguments.append(query)
-    result = _himalaya_call(account_name, arguments + ["--page-size", str(limit)])
+    result = _himalaya_call(account_name, arguments)
     normalized = [_normalize_himalaya(item) for item in _as_envelopes(result)[:limit]]
     return {"account": account_name, "provider": account["provider"], "messages": normalized, "count": len(normalized)}
+
+
+def _normalize_himalaya_query(query: str) -> str:
+    query = query.replace("in:inbox", "")
+    query = query.replace("newer_than:1d", f"after {(date.today() - timedelta(days=1)).isoformat()}")
+    return " ".join(query.split())
 
 
 def _search_one(account: str, query: str, limit: int) -> dict[str, Any]:
@@ -312,8 +322,9 @@ def _search_one(account: str, query: str, limit: int) -> dict[str, Any]:
     description="Search personal or student mail. Read-only; query syntax follows each registered provider.",
     annotations=READ_ONLY,
 )
-def mail_search(account: str = "all", query: str = "", limit: int = 20) -> dict[str, Any]:
+def mail_search(account: str = "all", query: str = "", limit: int = DEFAULT_SEARCH_LIMIT) -> dict[str, Any]:
     """Search configured mail accounts without changing message state."""
+    account = "all" if account == "" else account
     account = _validate_account(account)
     query = _validate_query(query)
     limit = _validate_limit(limit)

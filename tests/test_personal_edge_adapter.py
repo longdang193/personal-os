@@ -14,23 +14,28 @@ import personal_edge_adapter as adapter
 class PersonalEdgeAdapterTests(unittest.TestCase):
     def test_run_local_reads_async_streams(self):
         class Stream:
-            def __init__(self, value):
-                self.value = value
+            def __init__(self, *values):
+                self.values = iter(values)
+
+            async def readline(self):
+                return next(self.values, b"")
 
             async def read(self):
-                return self.value
+                return b""
 
         process = SimpleNamespace(
             stdin=SimpleNamespace(write=lambda value: None, drain=AsyncMock(), close=lambda: None),
-            stdout=Stream(b"event-1\nevent-2\n"),
+            stdout=Stream(b"event-1\n", b"event-2\n"),
             stderr=Stream(b""),
             returncode=0,
             wait=AsyncMock(return_value=0),
         )
+        on_line = AsyncMock()
         with patch.object(adapter.asyncio, "create_subprocess_exec", new=AsyncMock(return_value=process)):
-            result = asyncio.run(adapter._run_local({"request_id": "request-1"}))
+            result = asyncio.run(adapter._run_local({"request_id": "request-1"}, on_line))
 
-        self.assertEqual(result, (0, ["event-1\n", "event-2\n"], ""))
+        self.assertEqual(result, (0, ""))
+        self.assertEqual([call.args[0] for call in on_line.await_args_list], ["event-1\n", "event-2\n"])
 
     def test_envelope_is_stable_and_forwards_only_repository_metadata(self):
         metadata = {
@@ -91,13 +96,21 @@ class PersonalEdgeAdapterTests(unittest.TestCase):
             }),
         ]
         send = AsyncMock()
-        with patch.object(adapter, "_run_local", new=AsyncMock(return_value=(0, lines, ""))), patch.object(adapter, "_send", new=send):
+        async def run_local(envelope, on_line):
+            for line in lines:
+                await on_line(line)
+            return 0, ""
+
+        with patch.object(adapter, "_run_local", new=run_local), patch.object(adapter, "_send", new=send):
             self.assertTrue(asyncio.run(adapter.handle(SimpleNamespace(), message)))
         rendered = [call.args[2] for call in send.await_args_list]
         self.assertEqual(rendered, ["[accepted] started", "[completed] done"])
 
         send.reset_mock()
-        with patch.object(adapter, "_run_local", new=AsyncMock(return_value=(1, [], "runner failed"))), patch.object(adapter, "_send", new=send):
+        async def failed_run(envelope, on_line):
+            return 1, "runner failed"
+
+        with patch.object(adapter, "_run_local", new=failed_run), patch.object(adapter, "_send", new=send):
             self.assertTrue(asyncio.run(adapter.handle(SimpleNamespace(), message)))
         self.assertIn("runner failed", send.await_args.args[2])
 

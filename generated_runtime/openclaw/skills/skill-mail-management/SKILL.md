@@ -32,15 +32,16 @@ Use `skill-mail-management` in digest mode when the user asks for a mail digest,
 1. Resolve all configured mail accounts unless the user names specific accounts.
 2. Use unread mail or messages received during the last 24 hours by default.
 3. Fetch metadata first: account, sender, subject, received time, unread state, thread identity, and snippet.
-4. Fetch full content only when needed to determine importance, action, deadline, or reply need.
-5. Normalize messages across providers before ranking or grouping.
-6. Group one combined result into action required, needs reply, important, FYI, and low priority.
-7. Rank within groups by deadline, urgency, user impact, then received time.
-8. Keep source account visible on every item and report partial provider failures.
-9. Summarize suppressed newsletters, promotions, and routine automation by count.
-10. Keep digest mode read-only: never mark read, archive, delete, reply, or send.
-11. Propose handoffs only for concrete, material follow-ups; do not add them to ordinary FYI mail.
-12. Use action IDs only within the current digest and conversation.
+4. Keep digest searches bounded with `limit = 5` unless the user requests more.
+5. Fetch full content only when needed to determine importance, action, deadline, or reply need.
+6. Normalize messages across providers before ranking or grouping.
+7. Group one combined result into action required, needs reply, important, FYI, and low priority.
+8. Rank within groups by deadline, urgency, user impact, then received time.
+9. Keep source account visible on every item and report partial provider failures.
+10. Summarize suppressed newsletters, promotions, and routine automation by count.
+11. Keep digest mode read-only: never mark read, archive, delete, reply, or send.
+12. Propose handoffs only for concrete, material follow-ups; do not add them to ordinary FYI mail.
+13. Use action IDs only within the current digest and conversation.
 
 For each significant message report account, sender, subject, concise meaning, why it matters, deadline, requested action, reply-needed status, and recommended next step.
 

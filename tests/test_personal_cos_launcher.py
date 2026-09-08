@@ -50,9 +50,82 @@ class PersonalCosLauncherTests(unittest.TestCase):
                 self.assertEqual(launcher.run(envelope), 0)
         events = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual([event["type"] for event in events], ["accepted", "progress", "completed"])
-        self.assertEqual(run.call_args.args[0][:4], ["codex", "exec", "--json", "--cd"])
-        self.assertEqual(run.call_args.args[0][-1], "-")
-        self.assertIn(str(ROOT), run.call_args.args[0])
+        command = run.call_args.args[0]
+        self.assertEqual(
+            command[:8],
+            [
+                "codex",
+                "exec",
+                "--ephemeral",
+                "--json",
+                "-c",
+                'model="combo-normal"',
+                "-c",
+                'model_reasoning_effort="low"',
+            ],
+        )
+        self.assertEqual(command[-1], "-")
+        self.assertIn(str(ROOT), command)
+        self.assertEqual(run.call_args.kwargs["encoding"], "utf-8")
+        self.assertEqual(run.call_args.kwargs["errors"], "replace")
+
+    def test_codex_command_disables_configured_mcp_servers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_home = Path(temp_dir)
+            (config_home / "config.toml").write_text(
+                '[mcp_servers.mail]\ncommand = "mail"\n\n[mcp_servers.chrome-devtools]\ncommand = "chrome"\n',
+                encoding="utf-8",
+            )
+            tool_registry = config_home / "tool_registry.toml"
+            tool_registry.write_text(
+                '[[tools]]\nid = "mail-runtime"\nstatus = "runtime"\ncommand = "python scripts/mail_mcp_server.py"\n',
+                encoding="utf-8",
+            )
+            with patch.dict(launcher.os.environ, {"CODEX_HOME": str(config_home)}, clear=False):
+                with patch.object(launcher, "TOOL_REGISTRY_PATH", tool_registry):
+                    command = launcher.codex_command(ROOT)
+        self.assertEqual(
+            command[:8],
+            [
+                "codex",
+                "exec",
+                "--ephemeral",
+                "--json",
+                "-c",
+                'model="combo-normal"',
+                "-c",
+                'model_reasoning_effort="low"',
+            ],
+        )
+        self.assertIn("mcp_servers.mail.enabled=false", command)
+        self.assertIn(
+            f'mcp_servers.mail={{command={json.dumps(sys.executable)},args=["-u",{json.dumps(str((ROOT / "scripts/mail_mcp_server.py").resolve()))}],cwd={json.dumps(str(ROOT))},enabled=true}}',
+            command,
+        )
+        self.assertEqual(command[-3:], ["--cd", str(ROOT), "-"])
+
+    def test_codex_input_points_to_canonical_skill_root(self):
+        envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "hello"}
+        value = launcher.codex_input(envelope)
+        self.assertIn(str(launcher.SKILL_ROOT), value)
+        self.assertIn("do not probe user-global skill paths", value)
+        self.assertIn('"request_id": "request-1"', value)
+
+    def test_run_reports_failure_when_codex_output_is_unavailable(self):
+        process = SimpleNamespace(returncode=1, stdout=None, stderr=None)
+        envelope = {
+            "version": "personal.edge.v1",
+            "request_id": "request-1",
+            "text": "inspect",
+            "repository_id": "demo",
+            "access_mode": "read",
+        }
+        with patch.object(launcher, "project_roots", return_value={"demo": ("DEMO_ROOT", {"read"})}), patch.dict(launcher.os.environ, {"DEMO_ROOT": str(ROOT)}, clear=False), patch.object(launcher.subprocess, "run", return_value=process):
+            with patch("sys.stdout", new_callable=io.StringIO) as output:
+                self.assertEqual(launcher.run(envelope), 0)
+        events = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(events[-1]["type"], "failed")
+        self.assertEqual(events[-1]["payload"]["text"], "codex exited with 1")
 
     def test_resolve_project_root_uses_registry_id_and_rejects_unknown(self):
         with self.subTest("registered"):

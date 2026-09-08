@@ -84,7 +84,7 @@ def render_event(event: Mapping) -> str:
     return f"[{event['type']}] {text}"
 
 
-async def _run_local(envelope: dict) -> tuple[int, list[str], str]:
+async def _run_local(envelope: dict, on_line) -> tuple[int, str]:
     launcher = Path(__file__).with_name("personal_cos_launcher.py")
     process = await asyncio.create_subprocess_exec(
         sys.executable,
@@ -99,9 +99,14 @@ async def _run_local(envelope: dict) -> tuple[int, list[str], str]:
         await process.stdin.drain()
         process.stdin.close()
         stderr_task = asyncio.create_task(process.stderr.read())
-        lines = (await process.stdout.read()).decode("utf-8").splitlines(keepends=True)
-        stderr = (await stderr_task).decode("utf-8")
-        return await process.wait(), lines, stderr
+        try:
+            while line := await process.stdout.readline():
+                await on_line(line.decode("utf-8", errors="replace"))
+            stderr = (await stderr_task).decode("utf-8")
+            return await process.wait(), stderr
+        finally:
+            if not stderr_task.done():
+                stderr_task.cancel()
     finally:
         if process.returncode is None:
             process.kill()
@@ -127,14 +132,15 @@ async def handle(channel, message) -> bool:
         session_key=message.session_key,
     )
     try:
-        return_code, lines, stderr = await asyncio.wait_for(_run_local(envelope), timeout=600)
         emitted_terminal = False
-        for line in lines:
+        async def forward(line: str) -> None:
+            nonlocal emitted_terminal
             if not line.strip():
-                continue
+                return
             event = validate_event(json.loads(line), envelope["request_id"])
             await _send(channel, message, render_event(event))
             emitted_terminal = emitted_terminal or event["type"] in {"completed", "failed", "cancelled"}
+        return_code, stderr = await asyncio.wait_for(_run_local(envelope, forward), timeout=600)
         if return_code != 0 and not emitted_terminal:
             detail = stderr.strip() or f"local CoS runner exited with {return_code}"
             await _send(channel, message, f"[failed] Personal CoS runner unavailable: {detail}")
