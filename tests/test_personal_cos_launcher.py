@@ -123,6 +123,7 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertIn(f"Obsidian vault root for planner writes is exactly {ROOT}", value)
         self.assertIn("never use repository root, current working directory, active file path", value)
         self.assertIn("create only `<vault>\\Planner`", value)
+        self.assertIn("<vault>\\Planner\\Inbox.md` for captured tasks", value)
         self.assertIn('"request_id": "request-1"', value)
 
     def test_codex_input_includes_canonical_daily_planner_skill(self):
@@ -132,6 +133,9 @@ class PersonalCosLauncherTests(unittest.TestCase):
         skill = (ROOT / ".agents" / "skills" / "skill-daily-planner" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("Mandatory applicable skill: skill-daily-planner", value)
         self.assertIn(skill, value)
+        self.assertIn("Location reporting boundary: never report a path from prior context", value)
+        self.assertIn("Planner/Inbox.md` for captured tasks", value)
+        self.assertIn("canonical capture or daily-plan paths only as references", value)
 
     def test_codex_input_disables_planner_writes_without_vault(self):
         envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "Add to my plan"}

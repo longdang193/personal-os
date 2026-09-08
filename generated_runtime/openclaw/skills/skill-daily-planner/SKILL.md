@@ -119,6 +119,17 @@ Capture response must state one of: exact existing line unchanged, exact line
 updated after confirmation, or exact new line appended. List only metadata that
 was actually supplied and applied. Never report a resolved due date as skipped.
 
+## Location Reporting
+
+For planner location questions, use only these canonical paths under
+`OBSIDIAN_VAULT`: `Planner/Inbox.md` for captured tasks and
+`Daily/YYYY-MM-DD.md` for saved daily plans. A location claim requires a write
+operation and verification from the current turn. Never report a path from prior
+context, active workspace, or filesystem search. If current-turn write evidence
+is absent, say `No file write was verified in this turn.` For a planner follow-up,
+also state the canonical capture or daily-plan path as a reference, not as proof
+that this turn wrote it.
+
 ### Review
 
 Report completed, open, overdue, blocked, and carried-forward work from source

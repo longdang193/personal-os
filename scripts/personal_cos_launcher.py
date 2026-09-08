@@ -138,6 +138,7 @@ def codex_input(envelope: dict[str, Any]) -> str:
             f"- Obsidian vault root for planner writes is exactly {vault}.\n"
             "- Keep planner writes under that root only; never use repository root, current working directory, active file path, or developer-provided paths.\n"
             "- If user says create the folder, create only `<vault>\\Planner` and `<vault>\\Planner\\Inbox.md`; never create a folder beside an active file.\n"
+            "- Canonical planner paths: `<vault>\\Planner\\Inbox.md` for captured tasks and `<vault>\\Daily\\YYYY-MM-DD.md` for saved daily plans.\n"
         )
     else:
         vault_context = "- Obsidian vault root is unavailable; planner must not write files.\n"
@@ -151,7 +152,12 @@ def codex_input(envelope: dict[str, Any]) -> str:
         "Mandatory applicable skill: skill-daily-planner\n"
         "Follow this canonical skill for planning, task, daily-note, calendar, "
         "and reminder requests. Do not replace it with generic behavior.\n"
-        f"{planner_skill}"
+        f"{planner_skill}\n"
+        "Location reporting boundary: never report a path from prior context, "
+        "active workspace, or filesystem search. Report only a path verified "
+        "after a write in this turn; otherwise say `No file write was verified "
+        "in this turn.` For planner follow-ups, state canonical capture or "
+        "daily-plan paths only as references, never as current-turn write proof."
     )
 
 
