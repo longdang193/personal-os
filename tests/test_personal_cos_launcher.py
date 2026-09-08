@@ -31,6 +31,16 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertEqual(result["sequence"], 2)
         self.assertEqual(result["payload"], {"text": "running"})
 
+    def test_emit_keeps_unicode_safe_across_windows_console_transport(self):
+        raw = io.BytesIO()
+        stream = io.TextIOWrapper(raw, encoding="cp1252")
+        with patch.object(launcher.sys, "stdout", stream):
+            launcher.emit(launcher.event("request-1", 2, "completed", "Today – focus 📅"))
+            stream.flush()
+
+        wire = raw.getvalue().decode("utf-8")
+        self.assertEqual(json.loads(wire)["payload"]["text"], "Today – focus 📅")
+
 
     def test_run_emits_events_and_pins_registered_cwd(self):
         stdout = "\n".join([

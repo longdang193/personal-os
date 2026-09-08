@@ -1,8 +1,10 @@
 import json
+import io
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 
@@ -45,6 +47,28 @@ class PollContentUpdatesTests(unittest.TestCase):
 
         self.assertEqual([event["event_id"] for event in first], ["ovgu-fww-news:news-1"])
         self.assertEqual(second, [])
+
+    def test_main_keeps_unicode_safe_across_windows_console_transport(self):
+        rss = RSS.replace(b"Exam registration", "Exam – Anmeldung 📅".encode("utf-8"))
+        with tempfile.TemporaryDirectory() as directory:
+            state_path = Path(directory) / "state.json"
+            args = SimpleNamespace(
+                url="https://example.test/news.rss",
+                source_id="unicode-news",
+                state_file=state_path,
+                bootstrap=False,
+                rss_timeout=20,
+                apify_timeout=120,
+                max_items=5,
+            )
+            raw = io.BytesIO()
+            stream = io.TextIOWrapper(raw, encoding="cp1252")
+            with patch.object(poller, "parse_args", return_value=args), patch.object(poller, "fetch_feed", return_value=rss), patch.object(poller.sys, "stdout", stream):
+                self.assertEqual(poller.main(), 0)
+                stream.flush()
+
+        output = json.loads(raw.getvalue().decode("utf-8"))
+        self.assertEqual(output["title"], "Exam – Anmeldung 📅")
 
     def test_rejects_non_http_source_url(self):
         with self.assertRaises(ValueError):

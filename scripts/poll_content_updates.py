@@ -325,7 +325,7 @@ def main() -> int:
             save_state(state_path, state)
             if not args.bootstrap:
                 for event in new_events:
-                    print(json.dumps(event, ensure_ascii=False))
+                    print(json.dumps(event, ensure_ascii=True))
 
         apify_sources = [source for source in sources if source.get("type") == "social"]
         for source in [source for source in sources if source.get("type") == "rss"]:

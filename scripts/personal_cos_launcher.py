@@ -77,7 +77,7 @@ def event(request_id: str, sequence: int, event_type: str, text: str) -> dict[st
 
 
 def emit(value: dict[str, Any]) -> None:
-    print(json.dumps(value, ensure_ascii=False), flush=True)
+    print(json.dumps(value, ensure_ascii=True), flush=True)
 
 
 def codex_command(root: Path) -> list[str]:
