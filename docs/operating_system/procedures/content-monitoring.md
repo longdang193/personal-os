@@ -1,6 +1,6 @@
 # Content Monitoring
 
-Use one `content-poller` runtime for RSS and Apify Instagram sources.
+Use one `content-poller` command for RSS and Apify Instagram sources.
 
 ## Configuration
 
@@ -11,8 +11,8 @@ Use one `content-poller` runtime for RSS and Apify Instagram sources.
 
 ## Runtime
 
-Personal OS schedules the poller. Run from the repository checkout or use an
-absolute script path from the active runtime workspace:
+The Personal CoS launcher runs the poller directly for tracked-update requests.
+No MCP server or content service is required. Manual invocation:
 
 ```powershell
 python3 scripts/poll_content_updates.py --source-id <source-id> --max-items 5 --apify-timeout 120
@@ -30,7 +30,6 @@ events. Check state under `~/.personal-os/content-state/`.
 
 ## Delivery
 
-Review remains read-only. Personal CoS proposes authorized follow-ups. Current
-Instagram monitoring can run silently when no runtime delivery destination is
-configured; configure an explicit channel and destination before expecting
-notifications.
+Review remains read-only. Personal CoS reports poller events and provider
+errors separately. A failed poll is not a no-update result, and stale web
+search must not replace a failed tracked-source poll.

@@ -26,6 +26,8 @@ SESSION_HISTORY_LIMIT = 4
 SESSION_TEXT_LIMIT = 4000
 SESSION_TTL = timedelta(hours=24)
 SESSION_FUTURE_TOLERANCE = timedelta(minutes=5)
+CONTENT_POLLER_PATH = ROOT / "scripts" / "poll_content_updates.py"
+CONTENT_POLLER_TIMEOUT = 150
 
 
 def _session_path(conversation_id: object) -> Path | None:
@@ -213,6 +215,51 @@ def emit(value: dict[str, Any]) -> None:
     print(json.dumps(value, ensure_ascii=True), flush=True)
 
 
+def is_content_watch_request(text: str) -> bool:
+    normalized = " ".join(text.casefold().split())
+    return "tracked" in normalized and any(
+        term in normalized for term in ("update", "social", "website", "profile")
+    )
+
+
+def content_watch_context(text: str) -> str:
+    if not is_content_watch_request(text):
+        return ""
+    payload: dict[str, Any] = {"status": "fresh", "events": []}
+    try:
+        process = subprocess.run(
+            [sys.executable, str(CONTENT_POLLER_PATH), "--max-items", "5", "--apify-timeout", "120"],
+            cwd=ROOT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=CONTENT_POLLER_TIMEOUT,
+            check=False,
+            env=os.environ.copy(),
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        payload["status"] = "failed"
+        payload["error"] = str(error)
+    else:
+        for line in (process.stdout or "").splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict) and event.get("schema") == "content.update.v1":
+                payload["events"].append(event)
+        if process.returncode != 0:
+            payload["status"] = "failed"
+            payload["error"] = (process.stderr or "poller exited without an error message").strip()[:2000]
+    return (
+        "Fresh tracked-source poll from the Personal OS launcher. Treat this as "
+        "source evidence. Report every event and every error; never replace a "
+        "failed or missing poll with stale web search or a claim of no update.\n"
+        f"{json.dumps(payload, ensure_ascii=False)}\n\n"
+    )
+
+
 def codex_command(root: Path, *, access_mode: str = "write") -> list[str]:
     if access_mode not in ACCESS_MODES:
         raise ValueError(f"unsupported access_mode: {access_mode}")
@@ -286,7 +333,11 @@ def codex_command(root: Path, *, access_mode: str = "write") -> list[str]:
     return command
 
 
-def codex_input(envelope: dict[str, Any], session_context: list[dict[str, str]] | None = None) -> str:
+def codex_input(
+    envelope: dict[str, Any],
+    session_context: list[dict[str, str]] | None = None,
+    content_context: str = "",
+) -> str:
     vault = configured_obsidian_vault()
     planner_skill_path = SKILL_ROOT / "skill-daily-planner" / "SKILL.md"
     try:
@@ -311,6 +362,7 @@ def codex_input(envelope: dict[str, Any], session_context: list[dict[str, str]] 
         f"Access mode: {envelope.get('access_mode', 'read')}. Read mode forbids all file and external writes.\n\n"
         f"{format_session_context(session_context if session_context is not None else load_session_context(envelope.get('conversation_id')))}"
         f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}\n\n"
+        f"{content_context}"
         "Mandatory applicable skill: skill-daily-planner\n"
         "Follow this canonical skill for planning, task, daily-note, calendar, "
         "and reminder requests. Do not replace it with generic behavior.\n"
@@ -337,13 +389,14 @@ def run(envelope: dict[str, Any]) -> int:
     sequence = 0
     emit(event(request_id, sequence, "accepted", f"CoS turn started in {project_id}"))
     sequence += 1
+    content_context = content_watch_context(envelope["text"])
     child_env = os.environ.copy()
     configured_vault = configured_obsidian_vault()
     if configured_vault and "OBSIDIAN_VAULT" not in child_env:
         child_env["OBSIDIAN_VAULT"] = str(configured_vault)
     process = subprocess.run(
         codex_command(root, access_mode=envelope.get("access_mode", "read")),
-        input=codex_input(envelope, session_context),
+        input=codex_input(envelope, session_context, content_context),
         text=True,
         encoding="utf-8",
         errors="replace",

@@ -15,6 +15,27 @@ import personal_cos_launcher as launcher
 
 
 class PersonalCosLauncherTests(unittest.TestCase):
+    def test_content_watch_context_preserves_events(self):
+        event = {"schema": "content.update.v1", "source_id": "instagram-ispofficeovgu"}
+        process = SimpleNamespace(returncode=0, stdout=json.dumps(event) + "\n", stderr="")
+        with patch.object(launcher.subprocess, "run", return_value=process) as run:
+            context = launcher.content_watch_context("Give updates from tracked profiles")
+
+        self.assertIn('"status": "fresh"', context)
+        self.assertIn("instagram-ispofficeovgu", context)
+        self.assertEqual(run.call_args.kwargs["cwd"], launcher.ROOT)
+        self.assertEqual(run.call_args.kwargs["timeout"], launcher.CONTENT_POLLER_TIMEOUT)
+
+    def test_content_watch_context_reports_partial_failure_with_events(self):
+        event = {"schema": "content.update.v1", "source_id": "ovgu-fww-news"}
+        process = SimpleNamespace(returncode=1, stdout=json.dumps(event) + "\n", stderr="Instagram failed")
+        with patch.object(launcher.subprocess, "run", return_value=process):
+            context = launcher.content_watch_context("Give social updates from tracked websites")
+
+        self.assertIn('"status": "failed"', context)
+        self.assertIn("ovgu-fww-news", context)
+        self.assertIn("Instagram failed", context)
+
     def test_session_context_uses_versioned_ttl_and_atomic_json(self):
         now = datetime(2026, 9, 9, 12, tzinfo=timezone.utc)
         with tempfile.TemporaryDirectory() as directory, patch.object(launcher, "SESSION_DIR", Path(directory)):
@@ -129,6 +150,30 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertIn("read-only", command)
         self.assertEqual(run.call_args.kwargs["encoding"], "utf-8")
         self.assertEqual(run.call_args.kwargs["errors"], "replace")
+
+    def test_run_injects_fresh_content_context_before_cos_turn(self):
+        process = SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": "done"}}),
+            stderr="",
+        )
+        envelope = {
+            "version": "personal.edge.v1",
+            "request_id": "request-1",
+            "text": "Give updates from tracked profiles",
+            "repository_id": "demo",
+            "access_mode": "read",
+        }
+        with (
+            patch.object(launcher, "project_roots", return_value={"demo": ("DEMO_ROOT", {"read"})}),
+            patch.dict(launcher.os.environ, {"DEMO_ROOT": str(ROOT)}, clear=False),
+            patch.object(launcher, "content_watch_context", return_value="fresh source evidence"),
+            patch.object(launcher.subprocess, "run", return_value=process) as run,
+        ):
+            with patch("sys.stdout", new_callable=io.StringIO):
+                self.assertEqual(launcher.run(envelope), 0)
+
+        self.assertIn("fresh source evidence", run.call_args.kwargs["input"])
 
     def test_codex_command_disables_configured_mcp_servers(self):
         with tempfile.TemporaryDirectory() as temp_dir:
