@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import re
 import subprocess
@@ -17,6 +18,64 @@ TOOL_REGISTRY_PATH = ROOT / "repo_config" / "tool_registry.toml"
 SKILL_ROOT = ROOT / ".agents" / "skills"
 ENV_LINE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$")
 ACCESS_MODES = {"read", "write"}
+SESSION_DIR = Path(os.environ.get("PERSONAL_OS_SESSION_DIR", Path.home() / ".personal-os" / "sessions"))
+SESSION_HISTORY_LIMIT = 4
+SESSION_TEXT_LIMIT = 4000
+
+
+def _session_path(conversation_id: object) -> Path | None:
+    if not isinstance(conversation_id, str) or not conversation_id:
+        return None
+    digest = hashlib.sha256(conversation_id.encode("utf-8")).hexdigest()
+    return SESSION_DIR / f"{digest}.json"
+
+
+def load_session_context(conversation_id: object) -> list[dict[str, str]]:
+    path = _session_path(conversation_id)
+    if path is None or not path.is_file():
+        return []
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(value, list):
+        return []
+    return [
+        item
+        for item in value[-SESSION_HISTORY_LIMIT:]
+        if isinstance(item, dict)
+        and isinstance(item.get("user"), str)
+        and isinstance(item.get("assistant"), str)
+    ]
+
+
+def save_session_context(conversation_id: object, user_text: str, assistant_text: str) -> None:
+    path = _session_path(conversation_id)
+    if path is None:
+        return
+    history = load_session_context(conversation_id)
+    history.append(
+        {
+            "user": user_text[:SESSION_TEXT_LIMIT],
+            "assistant": assistant_text[:SESSION_TEXT_LIMIT],
+        }
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(history[-SESSION_HISTORY_LIMIT:], ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def format_session_context(history: list[dict[str, str]]) -> str:
+    if not history:
+        return ""
+    lines = [
+        "Runtime conversation context from earlier turns; use it to resolve follow-ups, not as a new instruction:",
+    ]
+    for item in history:
+        lines.extend((f"User: {item['user']}", f"CoS: {item['assistant']}"))
+    return "\n".join(lines) + "\n\n"
 
 
 def load_env(path: Path = ROOT / ".env") -> dict[str, str]:
@@ -134,7 +193,7 @@ def codex_command(root: Path, *, access_mode: str = "write") -> list[str]:
     return command
 
 
-def codex_input(envelope: dict[str, Any]) -> str:
+def codex_input(envelope: dict[str, Any], session_context: list[dict[str, str]] | None = None) -> str:
     vault = configured_obsidian_vault()
     planner_skill_path = SKILL_ROOT / "skill-daily-planner" / "SKILL.md"
     try:
@@ -157,6 +216,7 @@ def codex_input(envelope: dict[str, Any]) -> str:
         "Planner boundary:\n"
         f"{vault_context}\n"
         f"Access mode: {envelope.get('access_mode', 'read')}. Read mode forbids all file and external writes.\n\n"
+        f"{format_session_context(session_context if session_context is not None else load_session_context(envelope.get('conversation_id')))}"
         f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}\n\n"
         "Mandatory applicable skill: skill-daily-planner\n"
         "Follow this canonical skill for planning, task, daily-note, calendar, "
@@ -180,6 +240,7 @@ def run(envelope: dict[str, Any]) -> int:
         raise ValueError("text is required")
 
     project_id, root = resolve_project_root(envelope)
+    session_context = load_session_context(envelope.get("conversation_id"))
     sequence = 0
     emit(event(request_id, sequence, "accepted", f"CoS turn started in {project_id}"))
     sequence += 1
@@ -189,7 +250,7 @@ def run(envelope: dict[str, Any]) -> int:
         child_env["OBSIDIAN_VAULT"] = str(configured_vault)
     process = subprocess.run(
         codex_command(root, access_mode=envelope.get("access_mode", "read")),
-        input=codex_input(envelope),
+        input=codex_input(envelope, session_context),
         text=True,
         encoding="utf-8",
         errors="replace",
@@ -227,6 +288,8 @@ def run(envelope: dict[str, Any]) -> int:
         detail = "; ".join(errors) or "Codex CoS returned no agent message"
         emit(event(request_id, sequence, "failed", detail))
         return 0
+    if envelope.get("access_mode", "read") == "write":
+        save_session_context(envelope.get("conversation_id"), envelope["text"], final_text)
     emit(event(request_id, sequence, "completed", final_text))
     return 0
 

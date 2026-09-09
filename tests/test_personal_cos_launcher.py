@@ -146,6 +146,53 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertIn("Daily/YYYY-MM-DD.md` for captured tasks", value)
         self.assertIn("canonical capture or daily-plan paths only as references", value)
 
+    def test_codex_input_includes_runtime_conversation_context(self):
+        envelope = {
+            "version": "personal.edge.v1",
+            "request_id": "request-1",
+            "conversation_id": "telegram:7",
+            "text": "Google calendar",
+        }
+        with tempfile.TemporaryDirectory() as directory, patch.object(launcher, "SESSION_DIR", Path(directory)):
+            launcher.save_session_context(
+                "telegram:7",
+                "This task: need to learn German 📅 2026-09-08",
+                "Need calendar details.",
+            )
+            value = launcher.codex_input(envelope)
+
+        self.assertIn("This task: need to learn German 📅 2026-09-08", value)
+        self.assertIn("Need calendar details.", value)
+
+    def test_run_persists_completed_context_for_follow_up(self):
+        stdout = json.dumps({
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": "Need calendar details."},
+        })
+        process = SimpleNamespace(returncode=0, stdout=stdout, stderr="")
+        envelope = {
+            "version": "personal.edge.v1",
+            "request_id": "request-1",
+            "conversation_id": "telegram:7",
+            "text": "This task: need to learn German 📅 2026-09-08",
+            "repository_id": "demo",
+            "access_mode": "write",
+        }
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            launcher, "SESSION_DIR", Path(directory)
+        ), patch.object(
+            launcher, "project_roots", return_value={"demo": ("DEMO_ROOT", {"write"})}
+        ), patch.dict(
+            launcher.os.environ, {"DEMO_ROOT": str(ROOT)}, clear=False
+        ), patch.object(launcher.subprocess, "run", return_value=process):
+            with patch("sys.stdout", new_callable=io.StringIO):
+                self.assertEqual(launcher.run(envelope), 0)
+
+            context = launcher.load_session_context("telegram:7")
+
+        self.assertEqual(context[-1]["user"], envelope["text"])
+        self.assertEqual(context[-1]["assistant"], "Need calendar details.")
+
     def test_codex_input_disables_planner_writes_without_vault(self):
         envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "Add to my plan"}
         with patch.dict(launcher.os.environ, {"OBSIDIAN_VAULT": ""}, clear=False), patch.object(launcher, "load_env", return_value={}):

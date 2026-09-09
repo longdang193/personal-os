@@ -65,7 +65,9 @@ planner operation. Do not add planner tools or private vault access to the
 generated Nanobot edge surface. The local CoS launcher injects the canonical
 daily-planner skill into each Codex turn; a skill path mention alone is not
 enforcement. Owner relay requests default to write access; pass explicit
-`access_mode=read` only for read-only probes.
+`access_mode=read` only for read-only probes. The launcher keeps bounded recent
+follow-up context in runtime-local session state; planner data remains only in
+dated Daily notes.
 
 Hermes uses the same canonical `SKILL.md` in its configured local skill
 directory or supported repository installation path. Keep runtime installation
