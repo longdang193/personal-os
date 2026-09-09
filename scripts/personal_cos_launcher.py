@@ -8,7 +8,9 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +21,11 @@ SKILL_ROOT = ROOT / ".agents" / "skills"
 ENV_LINE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$")
 ACCESS_MODES = {"read", "write"}
 SESSION_DIR = Path(os.environ.get("PERSONAL_OS_SESSION_DIR", Path.home() / ".personal-os" / "sessions"))
+SESSION_FORMAT_VERSION = 1
 SESSION_HISTORY_LIMIT = 4
 SESSION_TEXT_LIMIT = 4000
+SESSION_TTL = timedelta(hours=24)
+SESSION_FUTURE_TOLERANCE = timedelta(minutes=5)
 
 
 def _session_path(conversation_id: object) -> Path | None:
@@ -30,14 +35,7 @@ def _session_path(conversation_id: object) -> Path | None:
     return SESSION_DIR / f"{digest}.json"
 
 
-def load_session_context(conversation_id: object) -> list[dict[str, str]]:
-    path = _session_path(conversation_id)
-    if path is None or not path.is_file():
-        return []
-    try:
-        value = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
+def _valid_session_turns(value: object) -> list[dict[str, str]]:
     if not isinstance(value, list):
         return []
     return [
@@ -49,11 +47,66 @@ def load_session_context(conversation_id: object) -> list[dict[str, str]]:
     ]
 
 
-def save_session_context(conversation_id: object, user_text: str, assistant_text: str) -> None:
+def _session_is_fresh(updated_at: object, now: datetime) -> bool:
+    if not isinstance(updated_at, str):
+        return False
+    try:
+        timestamp = datetime.fromisoformat(updated_at)
+    except ValueError:
+        return False
+    if timestamp.tzinfo is None:
+        return False
+    timestamp = timestamp.astimezone(timezone.utc)
+    now = now.astimezone(timezone.utc)
+    if timestamp > now + SESSION_FUTURE_TOLERANCE:
+        return False
+    return now - timestamp <= SESSION_TTL
+
+
+def load_session_context(
+    conversation_id: object,
+    *,
+    now: datetime | None = None,
+) -> list[dict[str, str]]:
+    path = _session_path(conversation_id)
+    if path is None or not path.is_file():
+        return []
+    now = now or datetime.now(timezone.utc)
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return []
+
+    if isinstance(value, dict):
+        if value.get("version") != SESSION_FORMAT_VERSION:
+            return []
+        if not _session_is_fresh(value.get("updated_at"), now):
+            return []
+        return _valid_session_turns(value.get("turns"))
+
+    if isinstance(value, list):
+        try:
+            updated_at = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+        except OSError:
+            return []
+        if now.astimezone(timezone.utc) - updated_at > SESSION_TTL:
+            return []
+        return _valid_session_turns(value)
+    return []
+
+
+def save_session_context(
+    conversation_id: object,
+    user_text: str,
+    assistant_text: str,
+    *,
+    now: datetime | None = None,
+) -> None:
     path = _session_path(conversation_id)
     if path is None:
         return
-    history = load_session_context(conversation_id)
+    now = now or datetime.now(timezone.utc)
+    history = load_session_context(conversation_id, now=now)
     history.append(
         {
             "user": user_text[:SESSION_TEXT_LIMIT],
@@ -61,10 +114,31 @@ def save_session_context(conversation_id: object, user_text: str, assistant_text
         }
     )
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(history[-SESSION_HISTORY_LIMIT:], ensure_ascii=False),
-        encoding="utf-8",
-    )
+    temporary_path: str | None = None
+    try:
+        descriptor, temporary_path = tempfile.mkstemp(
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            dir=path.parent,
+        )
+        with os.fdopen(descriptor, "w", encoding="utf-8") as temporary_file:
+            json.dump(
+                {
+                    "version": SESSION_FORMAT_VERSION,
+                    "updated_at": now.astimezone(timezone.utc).isoformat(),
+                    "turns": history[-SESSION_HISTORY_LIMIT:],
+                },
+                temporary_file,
+                ensure_ascii=False,
+            )
+        os.replace(temporary_path, path)
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            try:
+                os.unlink(temporary_path)
+            except FileNotFoundError:
+                pass
 
 
 def format_session_context(history: list[dict[str, str]]) -> str:
@@ -171,18 +245,37 @@ def codex_command(root: Path, *, access_mode: str = "write") -> list[str]:
     except (OSError, tomllib.TOMLDecodeError):
         registry = {}
     for tool in registry.get("tools", []):
-        tool_id = tool.get("id") if isinstance(tool, dict) else None
-        tool_command = tool.get("command") if isinstance(tool, dict) else None
-        if not isinstance(tool_id, str) or not tool_id.endswith("-runtime") or not isinstance(tool_command, str):
+        if not isinstance(tool, dict):
             continue
-        parts = tool_command.split(maxsplit=1)
-        if len(parts) != 2 or not parts[1].endswith(".py"):
+        tool_id = tool.get("id")
+        expose_to = tool.get("expose_to", [])
+        launch_kind = tool.get("launch_kind")
+        if not isinstance(tool_id, str) or not isinstance(expose_to, list) or "personal-cos" not in expose_to:
             continue
         server_name = tool_id.removesuffix("-runtime")
-        script = (ROOT / parts[1]).resolve()
+        if launch_kind == "python-script":
+            script_value = tool.get("script")
+            if not isinstance(script_value, str):
+                raise ValueError(f"tool {tool_id} missing script")
+            script = (ROOT / script_value).resolve()
+            try:
+                script.relative_to(ROOT)
+            except ValueError as error:
+                raise ValueError(f"tool {tool_id} script escapes repository root") from error
+            command_value = sys.executable
+            args = ["-u", str(script)]
+        elif launch_kind == "command":
+            command_value = tool.get("command")
+            args = tool.get("args", [])
+            if not isinstance(command_value, str) or not command_value:
+                raise ValueError(f"tool {tool_id} missing command")
+            if not isinstance(args, list) or not all(isinstance(value, str) for value in args):
+                raise ValueError(f"tool {tool_id} args must be a list of strings")
+        else:
+            raise ValueError(f"tool {tool_id} has unsupported launch_kind")
         mcp = (
             f"mcp_servers.{server_name}="
-            f"{{command={json.dumps(sys.executable)},args=[\"-u\",{json.dumps(str(script))}],"
+            f"{{command={json.dumps(command_value)},args={json.dumps(args)},"
             f"cwd={json.dumps(str(ROOT))},enabled=true}}"
         )
         command.extend(["-c", mcp])

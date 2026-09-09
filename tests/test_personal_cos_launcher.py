@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -14,6 +15,54 @@ import personal_cos_launcher as launcher
 
 
 class PersonalCosLauncherTests(unittest.TestCase):
+    def test_session_context_uses_versioned_ttl_and_atomic_json(self):
+        now = datetime(2026, 9, 9, 12, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as directory, patch.object(launcher, "SESSION_DIR", Path(directory)):
+            launcher.save_session_context("telegram:7", "hello", "world", now=now)
+            path = launcher._session_path("telegram:7")
+            self.assertIsNotNone(path)
+            document = json.loads(path.read_text(encoding="utf-8"))
+
+            self.assertEqual(document["version"], launcher.SESSION_FORMAT_VERSION)
+            self.assertEqual(document["turns"], [{"user": "hello", "assistant": "world"}])
+            self.assertEqual(launcher.load_session_context("telegram:7", now=now + launcher.SESSION_TTL), document["turns"])
+            self.assertEqual(launcher.load_session_context("telegram:7", now=now + launcher.SESSION_TTL + timedelta(seconds=1)), [])
+            self.assertEqual(list(Path(directory).glob("*.tmp")), [])
+
+    def test_session_context_rejects_invalid_and_far_future_timestamps(self):
+        now = datetime(2026, 9, 9, 12, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as directory, patch.object(launcher, "SESSION_DIR", Path(directory)):
+            path = launcher._session_path("telegram:7")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            for updated_at in ("invalid", (now + launcher.SESSION_FUTURE_TOLERANCE + timedelta(seconds=1)).isoformat()):
+                path.write_text(
+                    json.dumps({"version": launcher.SESSION_FORMAT_VERSION, "updated_at": updated_at, "turns": []}),
+                    encoding="utf-8",
+                )
+                self.assertEqual(launcher.load_session_context("telegram:7", now=now), [])
+
+    def test_legacy_session_context_uses_file_time_and_migrates_on_save(self):
+        now = datetime(2026, 9, 9, 12, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as directory, patch.object(launcher, "SESSION_DIR", Path(directory)):
+            path = launcher._session_path("telegram:7")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps([{"user": "old", "assistant": "reply"}]), encoding="utf-8")
+            timestamp = (now - launcher.SESSION_TTL).timestamp()
+            os.utime(path, (timestamp, timestamp))
+            self.assertEqual(launcher.load_session_context("telegram:7", now=now), [{"user": "old", "assistant": "reply"}])
+
+            launcher.save_session_context("telegram:7", "new", "answer", now=now)
+            document = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(document["version"], launcher.SESSION_FORMAT_VERSION)
+            self.assertEqual(document["turns"][-1], {"user": "new", "assistant": "answer"})
+
+    def test_session_context_cleans_temp_file_when_replace_fails(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(launcher, "SESSION_DIR", Path(directory)):
+            with patch.object(launcher.os, "replace", side_effect=OSError("replace failed")):
+                with self.assertRaisesRegex(OSError, "replace failed"):
+                    launcher.save_session_context("telegram:7", "hello", "world")
+            self.assertEqual(list(Path(directory).glob("*.tmp")), [])
+
     def test_load_env_does_not_mutate_process_environment(self):
         with tempfile.TemporaryDirectory() as directory:
             env_path = Path(directory) / ".env"
@@ -90,7 +139,7 @@ class PersonalCosLauncherTests(unittest.TestCase):
             )
             tool_registry = config_home / "tool_registry.toml"
             tool_registry.write_text(
-                '[[tools]]\nid = "mail-runtime"\nstatus = "runtime"\ncommand = "python scripts/mail_mcp_server.py"\n',
+                '[[tools]]\nid = "mail-runtime"\nstatus = "runtime"\nexpose_to = ["personal-cos"]\nlaunch_kind = "python-script"\nscript = "scripts/mail_mcp_server.py"\n',
                 encoding="utf-8",
             )
             with patch.dict(launcher.os.environ, {"CODEX_HOME": str(config_home)}, clear=False):
@@ -111,10 +160,35 @@ class PersonalCosLauncherTests(unittest.TestCase):
         )
         self.assertIn("mcp_servers.mail.enabled=false", command)
         self.assertIn(
-            f'mcp_servers.mail={{command={json.dumps(sys.executable)},args=["-u",{json.dumps(str((ROOT / "scripts/mail_mcp_server.py").resolve()))}],cwd={json.dumps(str(ROOT))},enabled=true}}',
+            f'mcp_servers.mail={{command={json.dumps(sys.executable)},args={json.dumps(["-u", str((ROOT / "scripts/mail_mcp_server.py").resolve())])},cwd={json.dumps(str(ROOT))},enabled=true}}',
             command,
         )
         self.assertEqual(command[-3:], ["--cd", str(ROOT), "-"])
+
+    def test_codex_command_exposes_structured_qmd_command(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry = Path(temp_dir) / "tool_registry.toml"
+            registry.write_text(
+                '[[tools]]\nid = "qmd"\nexpose_to = ["personal-cos"]\nlaunch_kind = "command"\ncommand = "qmd"\nargs = ["mcp"]\n',
+                encoding="utf-8",
+            )
+            with patch.object(launcher, "TOOL_REGISTRY_PATH", registry):
+                command = launcher.codex_command(ROOT)
+        self.assertIn(
+            f'mcp_servers.qmd={{command="qmd",args=["mcp"],cwd={json.dumps(str(ROOT))},enabled=true}}',
+            command,
+        )
+
+    def test_codex_command_ignores_undeclared_tools(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            registry = Path(temp_dir) / "tool_registry.toml"
+            registry.write_text(
+                '[[tools]]\nid = "qmd"\nlaunch_kind = "command"\ncommand = "qmd"\nargs = ["mcp"]\n',
+                encoding="utf-8",
+            )
+            with patch.object(launcher, "TOOL_REGISTRY_PATH", registry):
+                command = launcher.codex_command(ROOT)
+        self.assertFalse(any("mcp_servers.qmd=" in value for value in command))
 
     def test_codex_command_read_access_disables_writes(self):
         with patch.object(launcher, "configured_obsidian_vault", return_value=Path("C:/vault")):
@@ -234,6 +308,27 @@ class PersonalCosLauncherTests(unittest.TestCase):
         events = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual(events[-1]["type"], "failed")
         self.assertEqual(events[-1]["payload"]["text"], "codex exited with 1")
+
+    def test_failed_write_turn_does_not_persist_session_context(self):
+        process = SimpleNamespace(returncode=1, stdout=None, stderr="failed")
+        envelope = {
+            "version": "personal.edge.v1",
+            "request_id": "request-1",
+            "conversation_id": "telegram:7",
+            "text": "write",
+            "repository_id": "demo",
+            "access_mode": "write",
+        }
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+            launcher, "SESSION_DIR", Path(directory)
+        ), patch.object(
+            launcher, "project_roots", return_value={"demo": ("DEMO_ROOT", {"write"})}
+        ), patch.dict(
+            launcher.os.environ, {"DEMO_ROOT": str(ROOT)}, clear=False
+        ), patch.object(launcher.subprocess, "run", return_value=process):
+            with patch("sys.stdout", new_callable=io.StringIO):
+                self.assertEqual(launcher.run(envelope), 0)
+            self.assertEqual(launcher.load_session_context("telegram:7"), [])
 
     def test_resolve_project_root_uses_registry_id_and_rejects_unknown(self):
         with self.subTest("registered"):

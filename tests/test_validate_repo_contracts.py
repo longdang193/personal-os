@@ -44,6 +44,28 @@ class ValidateRepoContractsTests(unittest.TestCase):
         self.assertIn("tool mail references unknown capability: mail.send", issues)
         self.assertIn("account personal references unknown tool: missing", issues)
 
+    def test_tool_registry_validates_personal_cos_launch_contract(self):
+        registry = {
+            "version": 1,
+            "capabilities": [],
+            "tools": [{
+                "id": "qmd",
+                "domains": ["knowledge"],
+                "capabilities": [],
+                "expose_to": ["personal-cos"],
+                "launch_kind": "command",
+                "command": "qmd",
+                "args": "mcp",
+            }],
+        }
+
+        issues = validator.tool_registry_issues(registry)
+
+        self.assertIn("tool qmd command launch args must be a list of strings", issues)
+
+        registry["tools"][0]["args"] = ["mcp"]
+        self.assertEqual(validator.tool_registry_issues(registry), [])
+
     def test_mail_skill_defines_read_only_digest_mode(self):
         skill = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
             encoding="utf-8"

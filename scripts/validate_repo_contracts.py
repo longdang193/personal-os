@@ -163,6 +163,25 @@ def tool_registry_issues(registry: object) -> list[str]:
             for capability in capabilities:
                 if capability not in catalog:
                     issues.append(f"tool {tool_id} references unknown capability: {capability}")
+        expose_to = tool.get("expose_to", [])
+        if not isinstance(expose_to, list) or not all(isinstance(value, str) and value for value in expose_to):
+            issues.append(f"tool {tool_id} expose_to must be a list of strings")
+            expose_to = []
+        if "personal-cos" in expose_to:
+            launch_kind = tool.get("launch_kind")
+            if launch_kind not in {"python-script", "command"}:
+                issues.append(f"tool {tool_id} has unsupported launch_kind")
+            elif launch_kind == "python-script":
+                script = tool.get("script")
+                if not isinstance(script, str) or not generator.is_safe_manifest_path(script) or not script.endswith(".py"):
+                    issues.append(f"tool {tool_id} python-script needs safe .py script")
+            elif launch_kind == "command":
+                command = tool.get("command")
+                args = tool.get("args", [])
+                if not isinstance(command, str) or not command:
+                    issues.append(f"tool {tool_id} command launch needs command")
+                if not isinstance(args, list) or not all(isinstance(value, str) for value in args):
+                    issues.append(f"tool {tool_id} command launch args must be a list of strings")
     if len(tool_ids) != len(set(tool_ids)):
         issues.append("tool IDs must be unique")
 

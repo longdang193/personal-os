@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import sys
+from contextlib import asynccontextmanager
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -21,6 +22,25 @@ EVENT_TYPES = {
 }
 FORWARDED_METADATA = ("repository_id", "repository_ref", "access_mode")
 DEFAULT_ACCESS_MODE = "write"
+_conversation_locks: dict[str, tuple[asyncio.Lock, int]] = {}
+_conversation_locks_guard = asyncio.Lock()
+
+
+@asynccontextmanager
+async def _conversation_serial(conversation_id: str):
+    async with _conversation_locks_guard:
+        lock, users = _conversation_locks.get(conversation_id, (asyncio.Lock(), 0))
+        _conversation_locks[conversation_id] = (lock, users + 1)
+    try:
+        async with lock:
+            yield
+    finally:
+        async with _conversation_locks_guard:
+            current_lock, users = _conversation_locks[conversation_id]
+            if users == 1:
+                del _conversation_locks[conversation_id]
+            else:
+                _conversation_locks[conversation_id] = (current_lock, users - 1)
 
 
 def request_id(*, channel: str, sender_id: str, chat_id: str, content: str, metadata: Mapping | None) -> str:
@@ -133,25 +153,28 @@ async def handle(channel, message) -> bool:
         metadata=message.metadata,
         session_key=message.session_key,
     )
-    try:
-        emitted_terminal = False
-        async def forward(line: str) -> None:
-            nonlocal emitted_terminal
-            if not line.strip():
-                return
-            event = validate_event(json.loads(line), envelope["request_id"])
-            await _send(channel, message, render_event(event))
-            emitted_terminal = emitted_terminal or event["type"] in {"completed", "failed", "cancelled"}
-        return_code, stderr = await asyncio.wait_for(_run_local(envelope, forward), timeout=600)
-        if return_code != 0 and not emitted_terminal:
-            detail = stderr.strip() or f"local CoS runner exited with {return_code}"
-            await _send(channel, message, f"[failed] Personal CoS runner unavailable: {detail}")
-        elif not emitted_terminal:
-            await _send(channel, message, "[failed] Personal CoS runner returned no terminal event.")
-    except asyncio.TimeoutError:
-        await _send(channel, message, "[failed] Personal CoS runner timed out.")
-    except (OSError, ValueError, json.JSONDecodeError) as error:
-        await _send(channel, message, f"[failed] Personal CoS runner unavailable: {error}")
+    async with _conversation_serial(envelope["conversation_id"]):
+        try:
+            emitted_terminal = False
+
+            async def forward(line: str) -> None:
+                nonlocal emitted_terminal
+                if not line.strip():
+                    return
+                event = validate_event(json.loads(line), envelope["request_id"])
+                await _send(channel, message, render_event(event))
+                emitted_terminal = emitted_terminal or event["type"] in {"completed", "failed", "cancelled"}
+
+            return_code, stderr = await asyncio.wait_for(_run_local(envelope, forward), timeout=600)
+            if return_code != 0 and not emitted_terminal:
+                detail = stderr.strip() or f"local CoS runner exited with {return_code}"
+                await _send(channel, message, f"[failed] Personal CoS runner unavailable: {detail}")
+            elif not emitted_terminal:
+                await _send(channel, message, "[failed] Personal CoS runner returned no terminal event.")
+        except asyncio.TimeoutError:
+            await _send(channel, message, "[failed] Personal CoS runner timed out.")
+        except (OSError, ValueError, json.JSONDecodeError) as error:
+            await _send(channel, message, f"[failed] Personal CoS runner unavailable: {error}")
     return True
 
 

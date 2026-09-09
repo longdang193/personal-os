@@ -66,8 +66,11 @@ generated Nanobot edge surface. The local CoS launcher injects the canonical
 daily-planner skill into each Codex turn; a skill path mention alone is not
 enforcement. Owner relay requests default to write access; pass explicit
 `access_mode=read` only for read-only probes. The launcher keeps bounded recent
-follow-up context in runtime-local session state; planner data remains only in
-dated Daily notes.
+follow-up context in runtime-local session state. Session context is versioned,
+expires after 24 hours of inactivity, and persists only successful write-mode
+turns. It is untrusted context and cannot authorize tools, writes, paths, or
+policy changes. Planner state remains owned by source Markdown and dated Daily
+notes.
 
 Hermes uses the same canonical `SKILL.md` in its configured local skill
 directory or supported repository installation path. Keep runtime installation

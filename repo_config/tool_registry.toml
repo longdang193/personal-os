@@ -42,7 +42,9 @@ capabilities = [
 ]
 auth = "provider-native"
 status = "runtime"
-command = "python scripts/calendar_mcp_server.py"
+expose_to = ["personal-cos"]
+launch_kind = "python-script"
+script = "scripts/calendar_mcp_server.py"
 
 [[tools]]
 id = "himalaya"
@@ -66,7 +68,9 @@ capabilities = [
 ]
 auth = "provider-native"
 status = "runtime"
-command = "python scripts/mail_mcp_server.py"
+expose_to = ["personal-cos"]
+launch_kind = "python-script"
+script = "scripts/mail_mcp_server.py"
 read_only = true
 
 [[tools]]
@@ -94,7 +98,10 @@ id = "qmd"
 domains = ["knowledge"]
 capabilities = ["knowledge.search"]
 status = "external"
-command = "qmd mcp"
+expose_to = ["personal-cos"]
+launch_kind = "command"
+command = "qmd"
+args = ["mcp"]
 read_only = true
 
 [[tools]]

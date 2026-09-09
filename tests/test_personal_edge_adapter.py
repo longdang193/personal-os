@@ -12,6 +12,9 @@ import personal_edge_adapter as adapter
 
 
 class PersonalEdgeAdapterTests(unittest.TestCase):
+    def tearDown(self):
+        adapter._conversation_locks.clear()
+
     def test_run_local_reads_async_streams(self):
         class Stream:
             def __init__(self, *values):
@@ -124,6 +127,44 @@ class PersonalEdgeAdapterTests(unittest.TestCase):
         with patch.object(adapter, "_run_local", new=failed_run), patch.object(adapter, "_send", new=send):
             self.assertTrue(asyncio.run(adapter.handle(SimpleNamespace(), message)))
         self.assertIn("runner failed", send.await_args.args[2])
+
+    def test_handle_serializes_same_conversation_but_allows_other_conversations(self):
+        started = []
+        release_first = asyncio.Event()
+        second_started = asyncio.Event()
+
+        def message(chat_id, message_id, content):
+            return SimpleNamespace(
+                channel="telegram",
+                sender_id="owner",
+                chat_id=chat_id,
+                content=content,
+                metadata={"message_id": message_id},
+                session_key=f"telegram:{chat_id}",
+            )
+
+        async def run_local(envelope, on_line):
+            started.append(envelope["request_id"])
+            if envelope["request_id"] == "telegram-7-1":
+                await release_first.wait()
+            else:
+                second_started.set()
+            return 0, ""
+
+        async def scenario():
+            with patch.object(adapter, "_run_local", new=run_local), patch.object(adapter, "_send", new=AsyncMock()):
+                first = asyncio.create_task(adapter.handle(SimpleNamespace(), message("7", 1, "first")))
+                while not started:
+                    await asyncio.sleep(0)
+                second = asyncio.create_task(adapter.handle(SimpleNamespace(), message("7", 2, "second")))
+                other = asyncio.create_task(adapter.handle(SimpleNamespace(), message("8", 3, "other")))
+                await asyncio.wait_for(second_started.wait(), timeout=1)
+                self.assertEqual(started, ["telegram-7-1", "telegram-8-3"])
+                self.assertFalse(second.done())
+                release_first.set()
+                await asyncio.gather(first, second, other)
+
+        asyncio.run(scenario())
 
 
 
