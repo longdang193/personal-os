@@ -122,8 +122,8 @@ independently usable.
 - Coordination owner: `single lead controller`
 - Coordination schema: `2`
 - Branch: `master`
-- Base commit: `9de9487`
-- Expected workspace: `master` at `9de9487` with current plan and restored `repo_config/planning_artifact_schema.yaml` committed; preserve these unrelated paths exactly during execution: `.serena/project.yml` (`ECC7D3AD7DB856BDC15FA53CEB99096B7E301A7F469D887F0180DDD8F93EFEF2`), `agents/normal.toml` (`75CC63E3C6CE21EC6D98A034E6191005FF46AD55B1F1400B33453E273082CDED`), `agents/review.toml` (`1C8BCAE300D2FFB6E1E546F6325579023E8BED4FEBAEE32EE867FFAD23E1D494`), `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `agents/high.toml`, `agents/low.toml`, `agents/ui.toml`, `agents/xhigh.toml`, `repo_config/publication-config.json`, `scripts/new_audit.ps1`, `scripts/new_brainstorming_report.ps1`, `scripts/setup_hooks.ps1`, and `scripts/setup_hooks.sh`; current status/hash inventory is the preservation boundary, and the plan plus named execution targets are the only allowed changes
+- Base commit: `85e808a`
+- Expected workspace: `master` at `85e808a` with current plan and restored `repo_config/planning_artifact_schema.yaml` committed; preserve these unrelated paths exactly during execution: `.serena/project.yml` (`ECC7D3AD7DB856BDC15FA53CEB99096B7E301A7F469D887F0180DDD8F93EFEF2`), `agents/normal.toml` (`75CC63E3C6CE21EC6D98A034E6191005FF46AD55B1F1400B33453E273082CDED`), `agents/review.toml` (`1C8BCAE300D2FFB6E1E546F6325579023E8BED4FEBAEE32EE867FFAD23E1D494`), `AGENTS.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `CLAUDE.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `GEMINI.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `agents/high.toml` (`994A264864926CE66A2E6590B23690D45AD0D50F2519BF503E1625BA8E6391AE`), `agents/low.toml` (`90ACBE682930C518049F7AAC71503DC3FFD3C93DE33F80D663704CAEA74699BA`), `agents/ui.toml` (`ACBAA8EEBC26198CC1C3F7D50EFCA4712493E5F519A86D62F16F0EF66E50154D`), `agents/xhigh.toml` (`6846962CC4CF95AE037682A02A7D49825259A2552215EBE94074DF6B8AA01844`), `repo_config/publication-config.json` (`BF8899358F82871A4233E829D7C4A4FC7B7D62C3486C92E52998012F88FBC740`), `scripts/new_audit.ps1` (`EF9103075FDFBDE20DFAD11405B6ABE8C15C3FBB48D98B897354BD5B29D29D03`), `scripts/new_brainstorming_report.ps1` (`A1BB7AF6612A4C71231AB072C5622031F35B6DB6F38A16BC9B3BF726A0667612`), `scripts/setup_hooks.ps1` (`7E86E9F02332A277717E230B4D84EA9DBE31031DF703FE2D1617E264B7A19104`), and `scripts/setup_hooks.sh` (`815332A5675B2B4B420EE622B5666B7D04541DF85F5946A7CE6AFB5C48E429B7`); current status/hash inventory is the preservation boundary, and the plan plus named execution targets are the only allowed changes
 - Next action: dispatch independent plan review through Herdr; activate implementation lane only after review `PASS`
 - Blockers: `none`
 
@@ -260,9 +260,9 @@ independently usable.
 - `skill-backend-verification`
 
 **Files And Symbols:**
-- Inspect: `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, `tests/test_validate_repo_contracts.py`
-- Modify: `scripts/check_google_auth.ps1`, `tests/test_validate_repo_contracts.py`
-- Verify: `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, `scripts/mail_mcp_server.py`, `scripts/calendar_mcp_server.py`, PowerShell parser, mocked status-output cases, and student-provider routing
+- Inspect: `scripts/read_google_auth_profile.py`, `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, `scripts/mail_mcp_server.py`, `scripts/calendar_mcp_server.py`, `tests/test_validate_repo_contracts.py`, `tests/test_google_auth_profile.py`, `tests/test_mail_mcp_server.py`, `tests/test_calendar_mcp_server.py`
+- Modify: `scripts/read_google_auth_profile.py`, `scripts/check_google_auth.ps1`, `scripts/mail_mcp_server.py`, `scripts/calendar_mcp_server.py`, `tests/test_validate_repo_contracts.py`, `tests/test_google_auth_profile.py`, `tests/test_mail_mcp_server.py`, `tests/test_calendar_mcp_server.py`
+- Verify: `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, PowerShell parser, mocked status-output cases, and student-provider routing
 
 **Dependencies:**
 - Task 1 registry profile and validator.
@@ -275,12 +275,13 @@ independently usable.
 **Steps:**
 - [ ] Step 1: Add `scripts/read_google_auth_profile.py:load_profile` using stdlib `tomllib`; validate the exact profile contract and emit only the documented non-secret JSON fields for PowerShell.
 - [ ] Step 2: Read profile data through that helper; construct status and repair text from registry values, including `--scopes` from the profile rather than embedding scope literals.
-- [ ] Step 3: Implement the declared precedence for stdout and stderr: missing executable, `token_valid`, expired/auth markers, invalid-scope markers, then timeout/malformed JSON/exception/other command failure; never print raw provider output.
+- [ ] Step 3: Implement the declared precedence for stdout and stderr: missing executable, successful boolean `token_valid = true`, invalid-scope markers, expired/auth markers or boolean `token_valid = false`, then timeout/malformed JSON/exception/other command failure; never print raw provider output. For combined output containing both invalid-scope and expired/auth markers, classify `invalid_scope`.
 - [ ] Step 4: Own and remove executable duplicates found in Task 1's search, while keeping one shared `check_google_auth.ps1` call in both startup scripts; update both MCP bridges to consume the same profile/provider contract without duplicating auth policy; prove warning-only behavior and student-mail continuation.
 - [ ] Step 5: Test valid, expired, invalid-scope, missing executable, provider failure, timeout, malformed JSON, stderr-only failure, thrown exception, non-boolean token status, and secret/callback redaction cases with temporary local shims only.
 
 **Verification:**
 - [ ] `python -m unittest tests/test_google_auth_profile.py`
+- [ ] `python -m unittest tests/test_mail_mcp_server.py tests/test_calendar_mcp_server.py`
 - [ ] Run preflight with temporary `gws` shims for valid token, expired token, missing `gws`, invalid scope output, and provider command failure.
 - [ ] `powershell -NoProfile -Command "[System.Management.Automation.Language.Parser]::ParseFile('scripts/check_google_auth.ps1',[ref]$null,[ref]$null) | Out-Null"`
 - Expected: each case emits safe actionable output, only `ready` reports ready, no raw provider secrets or callback URLs appear, and parser returns no errors.
@@ -394,7 +395,7 @@ independently usable.
 
 ## Verification
 
-- `python -m unittest tests/test_validate_repo_contracts.py tests/test_google_auth_profile.py tests/test_generate_openclaw_surface.py tests/test_mail_mcp_server.py`
+- `python -m unittest tests/test_validate_repo_contracts.py tests/test_google_auth_profile.py tests/test_generate_openclaw_surface.py tests/test_mail_mcp_server.py tests/test_calendar_mcp_server.py`
 - `python scripts/generate_runtime_surface.py --check`
 - `python scripts/validate_repo_contracts.py`
 - `python -m py_compile scripts/validate_repo_contracts.py scripts/read_google_auth_profile.py scripts/mail_mcp_server.py scripts/calendar_mcp_server.py`
