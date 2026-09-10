@@ -43,6 +43,18 @@ Use `skill-mail-management` in digest mode when the user asks for a mail digest,
 12. Propose handoffs only for concrete, material follow-ups; do not add them to ordinary FYI mail.
 13. Use action IDs only within the current digest and conversation.
 
+### Provider Failure Handling
+
+- Treat `mail.search` status `partial` as incomplete coverage, not a complete digest.
+- State which accounts succeeded and which failed; never infer that a failed account has no mail.
+- If authentication fails, report re-authentication as the blocker and do not retry repeatedly, inspect credentials, or substitute stale context.
+- The registered mail runtime has no authentication, callback-listener, or browser-login capability. Never invent OAuth URLs, localhost ports, listener commands, consent state, token-storage diagnoses, or success claims.
+- For personal Gmail recovery, provide only the verified command `gws auth login --scopes 'https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/calendar'`. This preserves Calendar access in the shared `gws` token while keeping Gmail read-only.
+- Do not use bare `gws auth login` or broad scope presets; they can request unsupported Workspace admin scopes for personal Gmail accounts.
+- After one failed recheck, state that this bot cannot restart provider authentication; ask the user to run the verified Gmail recovery command locally, then retry mail search.
+- If status is `failed`, return the blocker instead of presenting an empty digest.
+- Keep successful account results when status is `partial`; preserve read-only behavior and state that no mail changed.
+
 For each significant message report account, sender, subject, concise meaning, why it matters, deadline, requested action, reply-needed status, and recommended next step.
 
 ## Action Handoffs
@@ -108,7 +120,7 @@ User approval for one handoff authorizes only that stated operation. Batch reque
 - For the `personal` account, route through registered Google Workspace provider authentication.
 - Respect the registered tool's `read_only = true` boundary; do not draft, send, archive, delete, or mark messages read through this account.
 - Use provider-native authentication and local secret stores.
-- Never place provider commands, tokens, credentials, mailbox paths, or private addresses in this skill.
+- Never place unverified provider commands, tokens, credentials, mailbox paths, or private addresses in this skill.
 - Do not claim success without provider result evidence.
 
 ## Output

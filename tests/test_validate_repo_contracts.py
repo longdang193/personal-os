@@ -75,6 +75,20 @@ class ValidateRepoContractsTests(unittest.TestCase):
         self.assertIn("Keep digest mode read-only", skill)
         self.assertIn("Fetch metadata first", skill)
 
+    def test_mail_auth_recovery_preserves_calendar_scope(self):
+        skill = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Treat `mail.search` status `partial` as incomplete coverage", skill)
+        self.assertIn("Never invent OAuth URLs, localhost ports, listener commands", skill)
+        self.assertIn("this bot cannot restart provider authentication", skill)
+        self.assertIn(
+            "`gws auth login --scopes 'https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/calendar'`",
+            skill,
+        )
+        self.assertIn("Do not use bare `gws auth login`", skill)
+
     def test_student_mail_provider_is_read_only(self):
         skill = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
             encoding="utf-8"

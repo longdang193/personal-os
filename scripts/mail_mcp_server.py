@@ -338,7 +338,8 @@ def mail_search(account: str = "all", query: str = "", limit: int = DEFAULT_SEAR
             if account != "all":
                 raise
             errors[selected] = str(error)
-    return {"accounts": list(accounts), "results": results, "errors": errors}
+    status = "failed" if errors and not results else "partial" if errors else "ok"
+    return {"status": status, "accounts": list(accounts), "results": results, "errors": errors}
 
 
 def _read_personal(account_name: str, message_id: str) -> dict[str, Any]:

@@ -34,7 +34,28 @@ class MailMcpServerTests(unittest.TestCase):
         with patch.object(mail, "_search_one", return_value={"messages": []}) as search:
             result = mail.mail_search("", "", 1)
         self.assertEqual(result["accounts"], ["personal", "student"])
+        self.assertEqual(result["status"], "ok")
         self.assertEqual(search.call_count, 2)
+
+    def test_all_account_search_marks_partial_provider_failure(self):
+        def search(account, query, limit):
+            if account == "personal":
+                raise mail.MailBridgeError("mail provider command failed: provider authentication failed")
+            return {"account": account, "messages": []}
+
+        with patch.object(mail, "_search_one", side_effect=search):
+            result = mail.mail_search("all", "", 1)
+
+        self.assertEqual(result["status"], "partial")
+        self.assertEqual(result["errors"]["personal"], "mail provider command failed: provider authentication failed")
+        self.assertEqual([item["account"] for item in result["results"]], ["student"])
+
+    def test_all_account_search_marks_total_provider_failure(self):
+        with patch.object(mail, "_search_one", side_effect=mail.MailBridgeError("provider authentication failed")):
+            result = mail.mail_search("all", "", 1)
+
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(result["results"], [])
 
     def test_himalaya_normalizes_common_gmail_digest_filters(self):
         query = mail._normalize_himalaya_query("in:inbox newer_than:1d")
