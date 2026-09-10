@@ -4,6 +4,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "load_env.ps1") -Names @("OPENCLAW_TELEGRAM_BOT_TOKEN")
+. (Join-Path $PSScriptRoot "check_google_auth.ps1")
 
 $openclawEntry = Join-Path $env:APPDATA "npm\node_modules\openclaw\dist\index.js"
 $arguments = @(

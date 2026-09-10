@@ -89,6 +89,16 @@ class ValidateRepoContractsTests(unittest.TestCase):
         )
         self.assertIn("Do not use bare `gws auth login`", skill)
 
+    def test_bot_startup_uses_google_auth_preflight(self):
+        helper = (ROOT / "scripts" / "check_google_auth.ps1").read_text(encoding="utf-8")
+        for script_name in ("start_nanobot.ps1", "start_openclaw.ps1"):
+            script = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
+            self.assertIn("check_google_auth.ps1", script)
+        self.assertIn("auth status", helper)
+        self.assertIn("\"token_valid\"", helper)
+        self.assertIn("gws auth login --scopes", helper)
+        self.assertIn("gmail.readonly,https://www.googleapis.com/auth/calendar", helper)
+
     def test_student_mail_provider_is_read_only(self):
         skill = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(
             encoding="utf-8"
