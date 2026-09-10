@@ -1,0 +1,325 @@
+---
+artifact_type: plan
+template_id: implementation-plan
+contract_version: "1"
+status: active
+layer: change
+name: google-auth-profile-ssot
+targets:
+  - agents/review.toml
+  - agents/normal.toml
+  - repo_config/tool_registry.toml
+  - scripts/validate_repo_contracts.py
+  - scripts/read_google_auth_profile.py
+  - scripts/check_google_auth.ps1
+  - README.md
+  - .agents/skills/skill-mail-management/SKILL.md
+  - generated_runtime/openclaw/TOOL_REGISTRY.toml
+  - generated_runtime/openclaw/skills/skill-mail-management/SKILL.md
+  - tests/test_validate_repo_contracts.py
+  - tests/test_google_auth_profile.py
+  - tests/test_generate_openclaw_surface.py
+---
+
+# Google Auth Profile SSOT
+
+## Goal
+
+Make one non-secret Google Workspace auth profile the source of truth for
+personal Gmail and Google Calendar. Make Nanobot and OpenClaw consume the same
+profile through existing startup preflight and generated runtime surfaces.
+Prevent broad or invalid OAuth scope requests, preserve Calendar access during
+Gmail repair, and keep provider failures isolated from student Himalaya mail.
+
+## Implementation Outcomes
+
+### One registry-owned Google auth profile
+
+`repo_config/tool_registry.toml` declares one `[[auth_profiles]]` entry with
+`id = "google-workspace"`, provider identity, CLI identity, status arguments,
+login arguments, and these exact scopes:
+
+- `https://www.googleapis.com/auth/gmail.readonly`
+- `https://www.googleapis.com/auth/calendar`
+
+Tool `google-workspace` and accounts `personal` plus `google-calendar` reference
+that same profile. No token, client secret, OAuth code, callback URL, account
+address, or other secret enters Git.
+
+### Registry-backed runtime behavior
+
+`scripts/read_google_auth_profile.py` uses stdlib `tomllib` to expose the
+validated profile as JSON. `scripts/check_google_auth.ps1` consumes that output
+instead of carrying scope text or repair instructions locally. Both startup
+scripts keep using this single preflight. README and the mail skill refer to
+the registry-backed repair path, not copied OAuth scope literals. OpenClaw
+output remains generated from canonical sources; Nanobot remains relay-only.
+
+### Symmetric failure handling and proof
+
+Auth states use one shared contract: `ready`, `missing`, `expired`,
+`invalid_scope`, and `provider_unavailable`. Google failure warns and degrades
+Google mail/calendar only. Student mail remains available. Focused tests prove
+registry shape, shared profile references, Calendar-scope preservation, missing
+CLI behavior, expired/invalid status handling, generated-surface consistency,
+and absence of secret or callback data in output paths.
+
+## Execution Approach
+
+- Mode: `inline sequential`
+- Coordination: `git-tracked`
+- Required skills: `skill-chief-of-staff`, `skill-systematic-debugging`, `skill-test-driven-development`, `skill-central-config-layer`, `skill-backend-verification`, `skill-code-standards`, `skill-verification-before-completion`, `skill-plan-document-reviewer`
+- Isolation: `current checkout for read-only review; isolated Git worktree for write lane`
+- Commit policy: `no commits during execution`
+- Preauthorized local actions: edit listed tracked files, regenerate declared OpenClaw output, preserve unrelated workspace changes, and run declared local tests, validators, syntax checks, and diff inspection
+- User-approval actions: external OAuth, provider authentication, real mail/calendar writes, commit, push, merge, discard, cleanup, or changes outside listed targets
+- Parallel ownership: none; registry, preflight, docs, generated output, and tests share one contract
+- Sequential fallback: confirm registry contract before changing consumers; update canonical sources before generation; run focused proof before final repository checks
+
+## Coordination State
+
+- Coordination owner: `single lead controller`
+- Coordination schema: `2`
+- Branch: `master`
+- Base commit: `82eb118`
+- Expected workspace: `master` at `82eb118` with unrelated `.serena/project.yml` modification preserved; plan file is the only new in-scope change before execution
+- Next action: dispatch independent plan review through Herdr; activate implementation lane only after review `PASS`
+- Blockers: `none`
+
+| Task | State | Workspace | Executor | Depends On | Required Proof | Evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| Task 1 | `pending` | current | `unresolved` | none | registry contract tests | pending |
+| Task 2 | `pending` | current | `unresolved` | Task 1 | preflight failure-state tests and PowerShell syntax | pending |
+| Task 3 | `pending` | current | `unresolved` | Task 2 | canonical docs plus generated-surface drift check | pending |
+| Task 4 | `pending` | current | `unresolved` | Task 3 | focused suite, validator, generation check, diff check | pending |
+
+## Task Breakdown
+
+### Task 1: Define and validate shared auth profile
+
+**Purpose:**
+- Establish one non-secret auth contract for Gmail and Calendar.
+
+**Task Function:**
+- Registry contract design and validation.
+
+**Template Profile:**
+- Controller-selected: `<none (lead controller)>`
+- Selection basis: existing TOML registry and validator are local, bounded, and low ambiguity.
+
+**Validator Profile:**
+- Controller-selected: `<none>`
+- Selection basis: focused registry tests provide direct proof.
+
+**Specification Coverage:**
+- One auth profile, exact least-privilege scopes, symmetric mail/calendar references, and secret exclusion.
+
+**Required Skills:**
+- `skill-systematic-debugging`
+- `skill-test-driven-development`
+- `skill-central-config-layer`
+- `skill-code-standards`
+
+**Files And Symbols:**
+- Inspect: `repo_config/tool_registry.toml`, `scripts/validate_repo_contracts.py:tool_registry_issues`, `tests/test_validate_repo_contracts.py`
+- Modify: `repo_config/tool_registry.toml`, `scripts/validate_repo_contracts.py:tool_registry_issues`, `tests/test_validate_repo_contracts.py`
+- Verify: parsed registry, validator output, all `gws auth login` occurrences in tracked canonical and generated files
+
+**Dependencies:**
+- Current registry entries `google-workspace`, `mail-runtime`, `personal`, and `google-calendar`.
+- Current failure root cause: duplicated auth command text and broad/bare OAuth login path can request unsupported scopes for personal Gmail.
+
+**Authority:**
+- Preauthorized local actions: modify registry schema, validator, and focused tests; use synthetic registry objects and temporary copies only.
+- Stop for: storing secrets or private account data, adding a second auth store, changing provider permissions, or changing mail/calendar capabilities.
+
+**Steps:**
+- [ ] Step 1: Add one `[[auth_profiles]]` entry with `id`, `provider`, `command`, `status_args`, `login_args`, and exact Gmail read-only plus Calendar scopes.
+- [ ] Step 2: Reference the profile from tool `google-workspace` and accounts `personal` plus `google-calendar`; reject missing, duplicate, malformed, unsupported, or unreferenced profile data.
+- [ ] Step 3: Add tests proving one profile serves personal Gmail and Calendar, preserves Calendar scope, rejects bare/broad repair definitions, and contains no secret-bearing fields.
+
+**Verification:**
+- [ ] `python -m unittest tests/test_validate_repo_contracts.py`
+- Expected: registry contract tests pass; malformed profiles fail with actionable validator errors; current registry passes.
+
+**Exit Criteria:**
+- Registry owns all Google auth facts needed by consumers, and validator prevents drift or unsafe profile shape.
+
+### Task 2: Make startup preflight consume registry profile
+
+**Purpose:**
+- Remove duplicated OAuth scope and repair-command literals from PowerShell behavior while preserving non-blocking startup.
+
+**Task Function:**
+- Shared preflight integration.
+
+**Template Profile:**
+- Controller-selected: `<none (lead controller)>`
+- Selection basis: one existing helper and two existing callers; no new auth service needed.
+
+**Validator Profile:**
+- Controller-selected: `<none>`
+- Selection basis: direct script checks plus focused tests cover bounded PowerShell behavior.
+
+**Specification Coverage:**
+- Same preflight for Nanobot and OpenClaw; common states `ready`, `missing`, `expired`, `invalid_scope`, `provider_unavailable`; student mail isolation; safe, non-secret diagnostics.
+
+**Required Skills:**
+- `skill-systematic-debugging`
+- `skill-test-driven-development`
+- `skill-backend-verification`
+
+**Files And Symbols:**
+- Inspect: `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, `tests/test_validate_repo_contracts.py`
+- Modify: `scripts/check_google_auth.ps1`, `tests/test_validate_repo_contracts.py`
+- Verify: `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, PowerShell parser, mocked status-output cases
+
+**Dependencies:**
+- Task 1 registry profile and validator.
+- Existing startup callers must remain unchanged in control flow: preflight warns and does not block student-only Himalaya mail.
+
+**Authority:**
+- Preauthorized local actions: modify preflight and tests; run mocked/local CLI checks without authenticating or writing provider state.
+- Stop for: automatic OAuth launch, callback listener management, token inspection, retries beyond one status check, or startup blocking on Google failure.
+
+**Steps:**
+- [ ] Step 1: Add `scripts/read_google_auth_profile.py:load_profile` using stdlib `tomllib`; emit only selected non-secret profile fields as JSON for PowerShell.
+- [ ] Step 2: Read profile data through that helper; construct status and repair text from registry values, appending `--scopes` from the profile rather than embedding scope literals.
+- [ ] Step 3: Normalize `token_valid = true` to `ready`, missing CLI to `missing`, failed auth/token output to `expired`, invalid-scope output to `invalid_scope`, and other command failures to `provider_unavailable`; log no raw provider output, tokens, URLs, or credentials.
+- [ ] Step 4: Prove both startup scripts call identical preflight and preserve warning-only behavior for Google failures.
+
+**Verification:**
+- [ ] `python -m unittest tests/test_google_auth_profile.py`
+- [ ] Run preflight with temporary `gws` shims for valid token, expired token, missing `gws`, invalid scope output, and provider command failure.
+- [ ] `powershell -NoProfile -Command "[System.Management.Automation.Language.Parser]::ParseFile('scripts/check_google_auth.ps1',[ref]$null,[ref]$null) | Out-Null"`
+- Expected: each case emits safe actionable output, only `ready` reports ready, no raw provider secrets or callback URLs appear, and parser returns no errors.
+
+**Exit Criteria:**
+- Preflight derives auth instructions from the registry, handles all declared states symmetrically, and remains non-blocking and secret-safe for both runtimes.
+
+### Task 3: Remove documentation duplication and regenerate runtime surfaces
+
+**Purpose:**
+- Make user guidance point to one registry-backed repair path and keep OpenClaw projection synchronized.
+
+**Task Function:**
+- Canonical documentation and generated-surface reconciliation.
+
+**Template Profile:**
+- Controller-selected: `<none (lead controller)>`
+- Selection basis: existing README and canonical mail skill own user guidance; generator already projects OpenClaw output.
+
+**Validator Profile:**
+- Controller-selected: `<none>`
+- Selection basis: generator drift check and text assertions provide direct proof.
+
+**Specification Coverage:**
+- SSOT, symmetry across runtimes and Google features, no manual callback guidance, and no duplicated OAuth scope literals.
+
+**Required Skills:**
+- `skill-central-config-layer`
+- `skill-code-standards`
+
+**Files And Symbols:**
+- Inspect: `README.md`, `.agents/skills/skill-mail-management/SKILL.md`, `scripts/generate_runtime_surface.py:adapter_output_files`, `tests/test_generate_openclaw_surface.py`
+- Modify: `README.md`, `.agents/skills/skill-mail-management/SKILL.md`, `tests/test_validate_repo_contracts.py`, `tests/test_generate_openclaw_surface.py`
+- Generate: `generated_runtime/openclaw/TOOL_REGISTRY.toml`, `generated_runtime/openclaw/skills/skill-mail-management/SKILL.md`
+- Verify: no stale bare/broad OAuth instructions in tracked source or generated output
+
+**Dependencies:**
+- Task 2 preflight command and state contract.
+- Canonical `.agents/skills` source remains authoritative; never edit generated OpenClaw files directly.
+
+**Authority:**
+- Preauthorized local actions: update listed canonical docs/tests, regenerate OpenClaw output, and inspect tracked text.
+- Stop for: runtime-specific policy duplication, manual OAuth URL/callback instructions, generated-file direct edits, or changes to Nanobot personal-tool exposure.
+
+**Steps:**
+- [ ] Step 1: Replace README's copied scope command with the registry-backed preflight repair path and explain one shared profile for Gmail plus Calendar.
+- [ ] Step 2: Update mail recovery guidance to request only the safe profile-backed repair path; retain partial-result and student-mail behavior.
+- [ ] Step 3: Regenerate all runtime surfaces and add assertions that canonical and generated guidance stay synchronized.
+
+**Verification:**
+- [ ] `python scripts/generate_runtime_surface.py`
+- [ ] `python scripts/generate_runtime_surface.py --check`
+- Expected: generated OpenClaw registry contains the single auth profile; canonical skill and generated skill match; no stale duplicated auth command remains.
+
+**Exit Criteria:**
+- Documentation and generated surfaces contain no independent Google scope policy and both runtimes expose the same registry-backed guidance.
+
+### Task 4: Final integration verification
+
+**Purpose:**
+- Prove root-cause fix, shared callers, failure isolation, generated consistency, and scope boundaries before execution completion.
+
+**Task Function:**
+- Final acceptance verification.
+
+**Template Profile:**
+- Controller-selected: `<none (lead controller)>`
+- Selection basis: lead controller owns fresh evidence and Git scope reconciliation.
+
+**Validator Profile:**
+- Controller-selected: `<none>`
+- Selection basis: repository tests, validators, syntax checks, and diff inspection are sufficient.
+
+**Specification Coverage:**
+- All implementation outcomes, symmetry rules, security boundaries, and preserved unrelated changes.
+
+**Required Skills:**
+- `skill-backend-verification`
+- `skill-verification-before-completion`
+- `skill-plan-document-reviewer`
+
+**Files And Symbols:**
+- Inspect: all plan targets, `git diff`, `git status`, all tracked `gws auth` references
+- Modify: none unless an in-scope verification defect is found
+- Verify: focused tests, generator, validator, PowerShell parser, and diff boundaries
+
+**Dependencies:**
+- Tasks 1–3 complete and accepted by lead controller.
+
+**Authority:**
+- Preauthorized local actions: run local tests, validators, syntax checks, generator checks, and inspect status/diff.
+- Stop for: provider authentication, real mail/calendar operations, unrelated changes, or any request to clean `.serena/project.yml`.
+
+**Steps:**
+- [ ] Step 1: Run focused registry, generation, and mail-contract tests.
+- [ ] Step 2: Run repository validation and PowerShell syntax checks.
+- [ ] Step 3: Inspect `git diff --check`, changed paths, generated headers, and tracked auth references; record deviations or deferrals.
+
+**Verification:**
+- [ ] `python -m unittest tests/test_validate_repo_contracts.py tests/test_google_auth_profile.py tests/test_generate_openclaw_surface.py tests/test_mail_mcp_server.py`
+- [ ] `python scripts/generate_runtime_surface.py --check`
+- [ ] `python scripts/validate_repo_contracts.py`
+- [ ] `python -m py_compile scripts/validate_repo_contracts.py scripts/mail_mcp_server.py scripts/calendar_mcp_server.py`
+- [ ] PowerShell parser check for `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, and `scripts/start_openclaw.ps1`
+- [ ] `git diff --check`
+- Expected: all checks pass; generated output is current; no secret/callback data appears; `.serena/project.yml` remains preserved and unrelated.
+
+**Exit Criteria:**
+- Fresh local evidence proves shared auth profile ownership, startup behavior, failure isolation, generated consistency, and no out-of-scope mutation. No commit or push occurs under this plan without separate user authorization.
+
+## Verification
+
+- `python -m unittest tests/test_validate_repo_contracts.py tests/test_google_auth_profile.py tests/test_generate_openclaw_surface.py tests/test_mail_mcp_server.py`
+- `python scripts/generate_runtime_surface.py --check`
+- `python scripts/validate_repo_contracts.py`
+- `python -m py_compile scripts/validate_repo_contracts.py scripts/read_google_auth_profile.py scripts/mail_mcp_server.py scripts/calendar_mcp_server.py`
+- PowerShell parser checks for all three auth/startup scripts
+- `git diff --check`
+- `rg -n -S "gws auth login|gmail.readonly|auth_profile|callback|localhost" README.md .agents scripts repo_config generated_runtime --glob '!*.pyc'`
+
+## Completion Criteria
+
+The plan is ready for completion verification when:
+
+1. one non-secret registry auth profile owns Google CLI identity, operations, and exact scopes; `read_google_auth_profile.py` is the only TOML-to-runtime bridge
+2. personal Gmail and Google Calendar reference that profile symmetrically
+3. preflight derives status and repair behavior from the profile and never logs secrets, OAuth codes, callback URLs, or raw provider output
+4. `ready`, `missing`, `expired`, `invalid_scope`, and `provider_unavailable` behavior is proven without blocking student mail
+5. README and canonical mail guidance contain no independent Google scope policy or bare OAuth instruction
+6. generated OpenClaw surfaces match canonical sources and Nanobot remains relay-only
+7. focused regression tests, backend boundary proof, generation checks, repository validation, syntax checks, and diff checks pass
+8. no auth service, callback listener, token inspector, retry loop, second token store, or new dependency is added
+9. unrelated `.serena/project.yml` modification remains untouched

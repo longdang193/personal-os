@@ -1,0 +1,9 @@
+name = "normal"
+model_provider = "9router"
+model = "combo-normal"
+description = "Default capability profile for ordinary bounded implementation work."
+developer_instructions = """Complete delegated task within assigned scope.
+
+Analyze important assumptions, verify material claims, preserve unrelated
+changes, and return concrete implementation evidence to the parent controller.
+"""
