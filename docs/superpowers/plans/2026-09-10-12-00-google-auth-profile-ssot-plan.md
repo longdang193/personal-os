@@ -47,6 +47,27 @@ Tool `google-workspace` and accounts `personal` plus `google-calendar` reference
 that same profile. No token, client secret, OAuth code, callback URL, account
 address, or other secret enters Git.
 
+The profile contract is exact and validated before consumers run:
+
+| Field | Type and allowed value |
+| --- | --- |
+| `id` | non-empty lowercase kebab-case string; unique within registry |
+| `provider` | exact string `google-workspace` |
+| `command` | non-empty executable name; current value `gws` |
+| `status_args` | non-empty string list; current value [`auth`, `status`] |
+| `login_args` | non-empty string list; current value [`auth`, `login`] |
+| `scopes` | exact, duplicate-free string list containing only the Gmail read-only and Calendar scopes above |
+| `redact_output` | exact boolean `true`; helper never returns command output |
+
+`auth_profile` is an explicit foreign-key reference to `auth_profiles.id` on
+auth-consuming tools and accounts. Existing `provider` remains provider
+identity and is not overloaded as an auth-profile reference. The current
+profile is referenced by `google-workspace`, `mail-runtime`,
+`calendar-runtime`, `personal`, and `google-calendar`; student Himalaya keeps
+its existing provider and has no Google profile reference. The helper JSON
+contract exposes only `id`, `provider`, `command`, `status_args`, `login_args`,
+and `scopes`; output is schema-validated and redacted by construction.
+
 ### Registry-backed runtime behavior
 
 `scripts/read_google_auth_profile.py` uses stdlib `tomllib` to expose the
@@ -64,6 +85,15 @@ Google mail/calendar only. Student mail remains available. Focused tests prove
 registry shape, shared profile references, Calendar-scope preservation, missing
 CLI behavior, expired/invalid status handling, generated-surface consistency,
 and absence of secret or callback data in output paths.
+
+Failure precedence is deterministic: missing executable → `missing`; successful
+status JSON with `token_valid = true` → `ready`; status JSON with
+`token_valid = false` or auth/token/credential failure in stdout or stderr →
+`expired`; invalid-scope marker in stdout or stderr → `invalid_scope`; timeout,
+malformed JSON, unexpected exception, or any other non-zero result →
+`provider_unavailable`. The first matching rule wins, and raw provider output
+never reaches logs or user output. Google failure is warning-only for both
+startup callers, so student mail remains independently usable.
 
 ## Execution Approach
 
@@ -83,7 +113,7 @@ and absence of secret or callback data in output paths.
 - Coordination schema: `2`
 - Branch: `master`
 - Base commit: `82eb118`
-- Expected workspace: `master` at `82eb118` with unrelated `.serena/project.yml` modification preserved; plan file is the only new in-scope change before execution
+- Expected workspace: `master` at `5afe65e` with unrelated `.serena/project.yml`, profile files, generated adapter files, and setup files preserved exactly; current plan and restored `repo_config/planning_artifact_schema.yaml` are the only CoS-owned changes before execution
 - Next action: dispatch independent plan review through Herdr; activate implementation lane only after review `PASS`
 - Blockers: `none`
 
@@ -181,9 +211,11 @@ and absence of secret or callback data in output paths.
 - Stop for: storing secrets or private account data, adding a second auth store, changing provider permissions, or changing mail/calendar capabilities.
 
 **Steps:**
-- [ ] Step 1: Add one `[[auth_profiles]]` entry with `id`, `provider`, `command`, `status_args`, `login_args`, and exact Gmail read-only plus Calendar scopes.
-- [ ] Step 2: Reference the profile from tool `google-workspace` and accounts `personal` plus `google-calendar`; reject missing, duplicate, malformed, unsupported, or unreferenced profile data.
-- [ ] Step 3: Add tests proving one profile serves personal Gmail and Calendar, preserves Calendar scope, rejects bare/broad repair definitions, and contains no secret-bearing fields.
+- [ ] Step 1: Add one `[[auth_profiles]]` entry matching the exact field/type/allowed-value contract above; keep all command and scope facts in this registry entry.
+- [ ] Step 2: Add `auth_profile = "google-workspace"` to `google-workspace`, `mail-runtime`, `calendar-runtime`, `personal`, and `google-calendar`; preserve `provider` as provider identity and leave student Himalaya unlinked.
+- [ ] Step 3: Extend `tool_registry_issues` to reject missing, duplicate, malformed, unsupported, unreferenced, secret-bearing, or mismatched profile references and to enforce the helper JSON contract.
+- [ ] Step 4: Search every tracked canonical/generated `gws auth`, scope, and repair literal; assign executable literals to Task 2, documentation literals to Task 3, and reject every duplicate outside the registry.
+- [ ] Step 5: Add tests proving symmetric Gmail/Calendar references, exact scope preservation, provider/profile distinction, student isolation, unsafe-profile rejection, and secret-field rejection.
 
 **Verification:**
 - [ ] `python -m unittest tests/test_validate_repo_contracts.py`
@@ -230,10 +262,11 @@ and absence of secret or callback data in output paths.
 - Stop for: automatic OAuth launch, callback listener management, token inspection, retries beyond one status check, or startup blocking on Google failure.
 
 **Steps:**
-- [ ] Step 1: Add `scripts/read_google_auth_profile.py:load_profile` using stdlib `tomllib`; emit only selected non-secret profile fields as JSON for PowerShell.
-- [ ] Step 2: Read profile data through that helper; construct status and repair text from registry values, appending `--scopes` from the profile rather than embedding scope literals.
-- [ ] Step 3: Normalize `token_valid = true` to `ready`, missing CLI to `missing`, failed auth/token output to `expired`, invalid-scope output to `invalid_scope`, and other command failures to `provider_unavailable`; log no raw provider output, tokens, URLs, or credentials.
-- [ ] Step 4: Prove both startup scripts call identical preflight and preserve warning-only behavior for Google failures.
+- [ ] Step 1: Add `scripts/read_google_auth_profile.py:load_profile` using stdlib `tomllib`; validate the exact profile contract and emit only the documented non-secret JSON fields for PowerShell.
+- [ ] Step 2: Read profile data through that helper; construct status and repair text from registry values, including `--scopes` from the profile rather than embedding scope literals.
+- [ ] Step 3: Implement the declared precedence for stdout and stderr: missing executable, `token_valid`, expired/auth markers, invalid-scope markers, then timeout/malformed JSON/exception/other command failure; never print raw provider output.
+- [ ] Step 4: Own and remove executable duplicates found in Task 1's search, while keeping one shared `check_google_auth.ps1` call in both startup scripts; prove warning-only behavior and student-mail continuation.
+- [ ] Step 5: Test valid, expired, invalid-scope, missing executable, provider failure, timeout, malformed JSON, stderr-only failure, thrown exception, and secret/callback redaction cases with temporary local shims only.
 
 **Verification:**
 - [ ] `python -m unittest tests/test_google_auth_profile.py`
@@ -282,9 +315,10 @@ and absence of secret or callback data in output paths.
 - Stop for: runtime-specific policy duplication, manual OAuth URL/callback instructions, generated-file direct edits, or changes to Nanobot personal-tool exposure.
 
 **Steps:**
-- [ ] Step 1: Replace README's copied scope command with the registry-backed preflight repair path and explain one shared profile for Gmail plus Calendar.
+- [ ] Step 1: Replace README's copied scope command and every documentation-level duplicate with registry-backed preflight guidance; explain one shared profile for Gmail plus Calendar without exposing callback, URL, token, or account data.
 - [ ] Step 2: Update mail recovery guidance to request only the safe profile-backed repair path; retain partial-result and student-mail behavior.
-- [ ] Step 3: Regenerate all runtime surfaces and add assertions that canonical and generated guidance stay synchronized.
+- [ ] Step 3: Regenerate all runtime surfaces from canonical sources; assert generated auth-profile fields, canonical/generated registry equality, canonical/generated mail-skill equality, and Nanobot relay-only boundaries.
+- [ ] Step 4: Re-run the full tracked-text search and record that only the registry owns Google login/scope literals and no bare OAuth/callback instruction remains.
 
 **Verification:**
 - [ ] `python scripts/generate_runtime_surface.py`
@@ -342,7 +376,7 @@ and absence of secret or callback data in output paths.
 - [ ] `python -m py_compile scripts/validate_repo_contracts.py scripts/mail_mcp_server.py scripts/calendar_mcp_server.py`
 - [ ] PowerShell parser check for `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, and `scripts/start_openclaw.ps1`
 - [ ] `git diff --check`
-- Expected: all checks pass; generated output is current; no secret/callback data appears; `.serena/project.yml` remains preserved and unrelated.
+- Expected: all checks pass; generated output is current; no secret/callback data appears; stderr, exception, malformed-input, timeout, and student-isolation proofs pass; `.serena/project.yml` and all unrelated files remain preserved.
 
 **Exit Criteria:**
 - Fresh local evidence proves shared auth profile ownership, startup behavior, failure isolation, generated consistency, and no out-of-scope mutation. No commit or push occurs under this plan without separate user authorization.
