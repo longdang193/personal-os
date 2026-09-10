@@ -106,11 +106,11 @@ and absence of secret or callback data in output paths.
 - Coordination prerequisite repair.
 
 **Template Profile:**
-- Controller-selected: `<none (lead controller)>`
+- Controller-selected: `none (lead controller)`
 - Selection basis: exact canonical schema is available in sibling Project OS repositories with matching content hash.
 
 **Validator Profile:**
-- Controller-selected: `<none>`
+- Controller-selected: `none`
 - Selection basis: shared lifecycle validator is the direct proof.
 
 **Specification Coverage:**
@@ -151,11 +151,11 @@ and absence of secret or callback data in output paths.
 - Registry contract design and validation.
 
 **Template Profile:**
-- Controller-selected: `<none (lead controller)>`
+- Controller-selected: `none (lead controller)`
 - Selection basis: existing TOML registry and validator are local, bounded, and low ambiguity.
 
 **Validator Profile:**
-- Controller-selected: `<none>`
+- Controller-selected: `none`
 - Selection basis: focused registry tests provide direct proof.
 
 **Specification Coverage:**
@@ -201,11 +201,11 @@ and absence of secret or callback data in output paths.
 - Shared preflight integration.
 
 **Template Profile:**
-- Controller-selected: `<none (lead controller)>`
+- Controller-selected: `none (lead controller)`
 - Selection basis: one existing helper and two existing callers; no new auth service needed.
 
 **Validator Profile:**
-- Controller-selected: `<none>`
+- Controller-selected: `none`
 - Selection basis: direct script checks plus focused tests cover bounded PowerShell behavior.
 
 **Specification Coverage:**
@@ -253,11 +253,11 @@ and absence of secret or callback data in output paths.
 - Canonical documentation and generated-surface reconciliation.
 
 **Template Profile:**
-- Controller-selected: `<none (lead controller)>`
+- Controller-selected: `none (lead controller)`
 - Selection basis: existing README and canonical mail skill own user guidance; generator already projects OpenClaw output.
 
 **Validator Profile:**
-- Controller-selected: `<none>`
+- Controller-selected: `none`
 - Selection basis: generator drift check and text assertions provide direct proof.
 
 **Specification Coverage:**
@@ -303,11 +303,11 @@ and absence of secret or callback data in output paths.
 - Final acceptance verification.
 
 **Template Profile:**
-- Controller-selected: `<none (lead controller)>`
+- Controller-selected: `none (lead controller)`
 - Selection basis: lead controller owns fresh evidence and Git scope reconciliation.
 
 **Validator Profile:**
-- Controller-selected: `<none>`
+- Controller-selected: `none`
 - Selection basis: repository tests, validators, syntax checks, and diff inspection are sufficient.
 
 **Specification Coverage:**
