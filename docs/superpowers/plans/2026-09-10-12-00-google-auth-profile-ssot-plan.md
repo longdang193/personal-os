@@ -13,6 +13,8 @@ targets:
   - scripts/validate_repo_contracts.py
   - scripts/read_google_auth_profile.py
   - scripts/check_google_auth.ps1
+  - scripts/mail_mcp_server.py
+  - scripts/calendar_mcp_server.py
   - README.md
   - .agents/skills/skill-mail-management/SKILL.md
   - generated_runtime/openclaw/TOOL_REGISTRY.toml
@@ -20,6 +22,8 @@ targets:
   - tests/test_validate_repo_contracts.py
   - tests/test_google_auth_profile.py
   - tests/test_generate_openclaw_surface.py
+  - tests/test_mail_mcp_server.py
+  - tests/test_calendar_mcp_server.py
 ---
 
 # Google Auth Profile SSOT
@@ -86,14 +90,20 @@ registry shape, shared profile references, Calendar-scope preservation, missing
 CLI behavior, expired/invalid status handling, generated-surface consistency,
 and absence of secret or callback data in output paths.
 
-Failure precedence is deterministic: missing executable → `missing`; successful
-status JSON with `token_valid = true` → `ready`; status JSON with
-`token_valid = false` or auth/token/credential failure in stdout or stderr →
-`expired`; invalid-scope marker in stdout or stderr → `invalid_scope`; timeout,
-malformed JSON, unexpected exception, or any other non-zero result →
-`provider_unavailable`. The first matching rule wins, and raw provider output
-never reaches logs or user output. Google failure is warning-only for both
-startup callers, so student mail remains independently usable.
+Failure precedence is deterministic. Preflight normalizes captured stdout and
+stderr to lowercase, strips ANSI control sequences, and never emits either
+stream. Rules run in this order: missing executable → `missing`; a successful
+status response with boolean `token_valid = true` → `ready`; output matching
+`invalid_scope`, `invalid scope`, `scope name is invalid`, `unsupported scope`,
+or `outside the domain of this legacy api` → `invalid_scope`; output matching
+`token expired`, `invalid_grant`, `authentication failed`, `auth required`,
+`credential`, or `permission denied`, or a successful status response with
+boolean `token_valid = false` → `expired`; timeout, malformed JSON, unexpected
+exception, or any other non-zero result → `provider_unavailable`. Matching is
+case-insensitive over the combined streams, and the first matching rule wins.
+Non-boolean `token_valid` is malformed input and yields `provider_unavailable`.
+Google failure is warning-only for both startup callers, so student mail remains
+independently usable.
 
 ## Execution Approach
 
@@ -112,8 +122,8 @@ startup callers, so student mail remains independently usable.
 - Coordination owner: `single lead controller`
 - Coordination schema: `2`
 - Branch: `master`
-- Base commit: `82eb118`
-- Expected workspace: `master` at `5afe65e` with unrelated `.serena/project.yml`, profile files, generated adapter files, and setup files preserved exactly; current plan and restored `repo_config/planning_artifact_schema.yaml` are the only CoS-owned changes before execution
+- Base commit: `9de9487`
+- Expected workspace: `master` at `9de9487` with current plan and restored `repo_config/planning_artifact_schema.yaml` committed; preserve these unrelated paths exactly during execution: `.serena/project.yml` (`ECC7D3AD7DB856BDC15FA53CEB99096B7E301A7F469D887F0180DDD8F93EFEF2`), `agents/normal.toml` (`75CC63E3C6CE21EC6D98A034E6191005FF46AD55B1F1400B33453E273082CDED`), `agents/review.toml` (`1C8BCAE300D2FFB6E1E546F6325579023E8BED4FEBAEE32EE867FFAD23E1D494`), `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `agents/high.toml`, `agents/low.toml`, `agents/ui.toml`, `agents/xhigh.toml`, `repo_config/publication-config.json`, `scripts/new_audit.ps1`, `scripts/new_brainstorming_report.ps1`, `scripts/setup_hooks.ps1`, and `scripts/setup_hooks.sh`; current status/hash inventory is the preservation boundary, and the plan plus named execution targets are the only allowed changes
 - Next action: dispatch independent plan review through Herdr; activate implementation lane only after review `PASS`
 - Blockers: `none`
 
@@ -198,8 +208,8 @@ startup callers, so student mail remains independently usable.
 - `skill-code-standards`
 
 **Files And Symbols:**
-- Inspect: `repo_config/tool_registry.toml`, `scripts/validate_repo_contracts.py:tool_registry_issues`, `tests/test_validate_repo_contracts.py`
-- Modify: `repo_config/tool_registry.toml`, `scripts/validate_repo_contracts.py:tool_registry_issues`, `tests/test_validate_repo_contracts.py`
+- Inspect: `repo_config/tool_registry.toml`, `scripts/validate_repo_contracts.py:tool_registry_issues`, `tests/test_validate_repo_contracts.py`, `scripts/mail_mcp_server.py:_gws_command`, `scripts/mail_mcp_server.py:_gws_call`, `scripts/calendar_mcp_server.py:_gws_command`, `scripts/calendar_mcp_server.py:_gws_call`, and their provider boundary tests
+- Modify: `repo_config/tool_registry.toml`, `scripts/validate_repo_contracts.py:tool_registry_issues`, `tests/test_validate_repo_contracts.py`, `tests/test_mail_mcp_server.py`, `tests/test_calendar_mcp_server.py`
 - Verify: parsed registry, validator output, all `gws auth login` occurrences in tracked canonical and generated files
 
 **Dependencies:**
@@ -216,6 +226,7 @@ startup callers, so student mail remains independently usable.
 - [ ] Step 3: Extend `tool_registry_issues` to reject missing, duplicate, malformed, unsupported, unreferenced, secret-bearing, or mismatched profile references and to enforce the helper JSON contract.
 - [ ] Step 4: Search every tracked canonical/generated `gws auth`, scope, and repair literal; assign executable literals to Task 2, documentation literals to Task 3, and reject every duplicate outside the registry.
 - [ ] Step 5: Add tests proving symmetric Gmail/Calendar references, exact scope preservation, provider/profile distinction, student isolation, unsafe-profile rejection, and secret-field rejection.
+- [ ] Step 6: Prove `mail_mcp_server.py` and `calendar_mcp_server.py` resolve the same registry profile/provider boundary rather than carrying independent Google command or auth policy.
 
 **Verification:**
 - [ ] `python -m unittest tests/test_validate_repo_contracts.py`
@@ -251,7 +262,7 @@ startup callers, so student mail remains independently usable.
 **Files And Symbols:**
 - Inspect: `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, `tests/test_validate_repo_contracts.py`
 - Modify: `scripts/check_google_auth.ps1`, `tests/test_validate_repo_contracts.py`
-- Verify: `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, PowerShell parser, mocked status-output cases
+- Verify: `scripts/start_nanobot.ps1`, `scripts/start_openclaw.ps1`, `scripts/mail_mcp_server.py`, `scripts/calendar_mcp_server.py`, PowerShell parser, mocked status-output cases, and student-provider routing
 
 **Dependencies:**
 - Task 1 registry profile and validator.
@@ -265,8 +276,8 @@ startup callers, so student mail remains independently usable.
 - [ ] Step 1: Add `scripts/read_google_auth_profile.py:load_profile` using stdlib `tomllib`; validate the exact profile contract and emit only the documented non-secret JSON fields for PowerShell.
 - [ ] Step 2: Read profile data through that helper; construct status and repair text from registry values, including `--scopes` from the profile rather than embedding scope literals.
 - [ ] Step 3: Implement the declared precedence for stdout and stderr: missing executable, `token_valid`, expired/auth markers, invalid-scope markers, then timeout/malformed JSON/exception/other command failure; never print raw provider output.
-- [ ] Step 4: Own and remove executable duplicates found in Task 1's search, while keeping one shared `check_google_auth.ps1` call in both startup scripts; prove warning-only behavior and student-mail continuation.
-- [ ] Step 5: Test valid, expired, invalid-scope, missing executable, provider failure, timeout, malformed JSON, stderr-only failure, thrown exception, and secret/callback redaction cases with temporary local shims only.
+- [ ] Step 4: Own and remove executable duplicates found in Task 1's search, while keeping one shared `check_google_auth.ps1` call in both startup scripts; update both MCP bridges to consume the same profile/provider contract without duplicating auth policy; prove warning-only behavior and student-mail continuation.
+- [ ] Step 5: Test valid, expired, invalid-scope, missing executable, provider failure, timeout, malformed JSON, stderr-only failure, thrown exception, non-boolean token status, and secret/callback redaction cases with temporary local shims only.
 
 **Verification:**
 - [ ] `python -m unittest tests/test_google_auth_profile.py`
@@ -317,7 +328,7 @@ startup callers, so student mail remains independently usable.
 **Steps:**
 - [ ] Step 1: Replace README's copied scope command and every documentation-level duplicate with registry-backed preflight guidance; explain one shared profile for Gmail plus Calendar without exposing callback, URL, token, or account data.
 - [ ] Step 2: Update mail recovery guidance to request only the safe profile-backed repair path; retain partial-result and student-mail behavior.
-- [ ] Step 3: Regenerate all runtime surfaces from canonical sources; assert generated auth-profile fields, canonical/generated registry equality, canonical/generated mail-skill equality, and Nanobot relay-only boundaries.
+- [ ] Step 3: Regenerate all runtime surfaces from canonical sources; assert generated auth-profile fields, canonical/generated registry equality including profile references and exact scopes, canonical/generated mail-skill equality, and Nanobot relay-only boundaries.
 - [ ] Step 4: Re-run the full tracked-text search and record that only the registry owns Google login/scope literals and no bare OAuth/callback instruction remains.
 
 **Verification:**
