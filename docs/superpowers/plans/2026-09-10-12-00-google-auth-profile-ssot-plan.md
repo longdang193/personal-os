@@ -122,11 +122,12 @@ independently usable.
 - Coordination owner: `single lead controller`
 - Coordination schema: `2`
 - Branch: `master`
-- Base code commit: `1b214ae`
+- Base commit: `1b214ae`
 - Plan delivery commit: `01d15ec`; this exact plan revision is the execution contract and must be present in the executor checkout.
 - Expected workspace: `master` at plan delivery commit `01d15ec`, with code comparison base `1b214ae`; preserve these unrelated paths exactly during execution: `.serena/project.yml` (`ECC7D3AD7DB856BDC15FA53CEB99096B7E301A7F469D887F0180DDD8F93EFEF2`), `agents/normal.toml` (`75CC63E3C6CE21EC6D98A034E6191005FF46AD55B1F1400B33453E273082CDED`), `agents/review.toml` (`1C8BCAE300D2FFB6E1E546F6325579023E8BED4FEBAEE32EE867FFAD23E1D494`), `AGENTS.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `CLAUDE.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `GEMINI.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `agents/high.toml` (`994A264864926CE66A2E6590B23690D45AD0D50F2519BF503E1625BA8E6391AE`), `agents/low.toml` (`90ACBE682930C518049F7AAC71503DC3FFD3C93DE33F80D663704CAEA74699BA`), `agents/ui.toml` (`ACBAA8EEBC26198CC1C3F7D50EFCA4712493E5F519A86D62F16F0EF66E50154D`), `agents/xhigh.toml` (`6846962CC4CF95AE037682A02A7D49825259A2552215EBE94074DF6B8AA01844`), `repo_config/publication-config.json` (`BF8899358F82871A4233E829D7C4A4FC7B7D62C3486C92E52998012F88FBC740`), `scripts/new_audit.ps1` (`EF9103075FDFBDE20DFAD11405B6ABE8C15C3FBB48D98B897354BD5B29D29D03`), `scripts/new_brainstorming_report.ps1` (`A1BB7AF6612A4C71231AB072C5622031F35B6DB6F38A16BC9B3BF726A0667612`), `scripts/setup_hooks.ps1` (`7E86E9F02332A277717E230B4D84EA9DBE31031DF703FE2D1617E264B7A19104`), and `scripts/setup_hooks.sh` (`815332A5675B2B4B420EE622B5666B7D04541DF85F5946A7CE6AFB5C48E429B7`); current status/hash inventory is the preservation boundary, and the plan plus named execution targets are the only allowed changes
-- Next action: dispatch independent plan review through Herdr; activate implementation lane only after review `PASS`
-- Blockers: `none`
+- Review: `PASS` from independent Herdr review lane; review-profile provider failure used approved `normal` fallback
+- Next action: retire completed review pane, create isolated worktree, and dispatch Task 1 through Herdr
+- Blockers: current plan validates; repository-wide validator still reports pre-existing errors in three older plans, out of scope
 
 | Task | State | Workspace | Executor | Depends On | Required Proof | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
