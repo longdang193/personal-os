@@ -39,6 +39,11 @@ CAPABILITY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*\.[a-z][a-z0-9_-]*$")
 ENV_NAME_PATTERN = re.compile(r"^[A-Z][A-Z0-9_]*$")
 FRONTEND_ROLES = {"edge-relay", "personal-cos"}
 ACCESS_MODES = {"read", "write"}
+AUTH_PROFILE_ID_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+GOOGLE_SCOPES = {
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/calendar",
+}
 
 
 def manifest_issues(manifest: object) -> list[str]:
@@ -139,6 +144,46 @@ def tool_registry_issues(registry: object) -> list[str]:
         if not CAPABILITY_PATTERN.fullmatch(capability):
             issues.append(f"tool registry contains invalid capability: {capability}")
 
+    profiles = registry.get("auth_profiles", [])
+    if not isinstance(profiles, list):
+        issues.append("tool registry auth_profiles must be a list")
+        profiles = []
+    profile_ids: list[str] = []
+    required_profile_tools = {"google-workspace", "mail-runtime", "calendar-runtime"}
+    required_profile_accounts = {"personal", "google-calendar"}
+    for profile in profiles:
+        if not isinstance(profile, dict):
+            issues.append("auth profile entries must be objects")
+            continue
+        profile_id = profile.get("id")
+        if not isinstance(profile_id, str) or not AUTH_PROFILE_ID_PATTERN.fullmatch(profile_id):
+            issues.append("auth profile id must be lowercase kebab-case")
+            continue
+        profile_ids.append(profile_id)
+        unexpected = set(profile) - {"id", "provider", "command", "status_args", "login_args", "scopes", "redact_output"}
+        if unexpected:
+            issues.append(f"auth profile {profile_id} contains unexpected fields")
+        if profile.get("provider") != "google-workspace":
+            issues.append(f"auth profile {profile_id} provider must be google-workspace")
+        if not isinstance(profile.get("command"), str) or not profile["command"]:
+            issues.append(f"auth profile {profile_id} command must be non-empty")
+        for field, expected in (("status_args", ["auth", "status"]), ("login_args", ["auth", "login"])):
+            value = profile.get(field)
+            if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
+                issues.append(f"auth profile {profile_id} {field} must be a non-empty list of strings")
+            elif value != expected:
+                issues.append(f"auth profile {profile_id} {field} is unsupported")
+        scopes = profile.get("scopes")
+        if not isinstance(scopes, list) or not all(isinstance(scope, str) for scope in scopes) or len(scopes) != len(set(scopes)) or set(scopes) != GOOGLE_SCOPES:
+            issues.append(f"auth profile {profile_id} scopes must contain exact supported Google scopes")
+        if profile.get("redact_output") is not True:
+            issues.append(f"auth profile {profile_id} redact_output must be true")
+        if any(key.lower() in {"token", "secret", "credential", "code", "callback", "url", "account"} for key in profile):
+            issues.append(f"auth profile {profile_id} contains forbidden secret field")
+    if len(profile_ids) != len(set(profile_ids)):
+        issues.append("auth profile IDs must be unique")
+    profile_set = set(profile_ids)
+
     tools = registry.get("tools")
     if not isinstance(tools, list):
         return issues + ["tool registry tools must be a list"]
@@ -152,6 +197,10 @@ def tool_registry_issues(registry: object) -> list[str]:
             issues.append("tool registry tool is missing id")
             continue
         tool_ids.append(tool_id)
+        if tool.get("auth_profile") is not None and tool["auth_profile"] not in profile_set:
+            issues.append(f"tool {tool_id} references unknown auth profile: {tool['auth_profile']}")
+        if tool_id in required_profile_tools and tool.get("auth_profile") != "google-workspace":
+            issues.append(f"tool {tool_id} must reference google-workspace auth profile")
         if "runtime" in tool:
             issues.append(f"tool {tool_id} must not declare runtime in canonical registry")
         for field in ("domains", "capabilities"):
@@ -201,8 +250,21 @@ def tool_registry_issues(registry: object) -> list[str]:
         tool_id = account.get("tool")
         if tool_id not in tool_ids:
             issues.append(f"account {account_id} references unknown tool: {tool_id}")
+        if account.get("auth_profile") is not None and account["auth_profile"] not in profile_set:
+            issues.append(f"account {account_id} references unknown auth profile: {account['auth_profile']}")
+        if account_id in required_profile_accounts and account.get("auth_profile") != "google-workspace":
+            issues.append(f"account {account_id} must reference google-workspace auth profile")
+        if account.get("provider") == "himalaya" and account.get("auth_profile") is not None:
+            issues.append(f"account {account_id} Himalaya provider must not reference Google auth profile")
     if len(account_ids) != len(set(account_ids)):
         issues.append("account IDs must be unique")
+    referenced_profiles = {
+        item.get("auth_profile")
+        for item in tools + accounts
+        if isinstance(item, dict) and item.get("auth_profile") is not None
+    }
+    for profile_id in sorted(profile_set - referenced_profiles):
+        issues.append(f"auth profile {profile_id} is unreferenced")
     return issues
 
 

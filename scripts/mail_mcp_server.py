@@ -12,6 +12,7 @@ import tomllib
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
+from read_google_auth_profile import load_profile
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -91,6 +92,8 @@ def _account_config(account: str) -> dict[str, Any]:
         if item.get("id") == account and item.get("domain") == "mail":
             if item.get("tool") != "mail-runtime" or not item.get("provider"):
                 break
+            if item.get("provider") == "google-workspace" and item.get("auth_profile") != load_profile(REGISTRY_PATH)["id"]:
+                break
             return item
     raise MailBridgeError(f"mail account is not registered: {account}")
 
@@ -125,7 +128,8 @@ def _command_result(command: list[str]) -> Any:
 
 
 def _gws_command() -> list[str]:
-    executable = shutil.which("gws.ps1") or shutil.which("gws")
+    profile = load_profile(REGISTRY_PATH)
+    executable = shutil.which(profile["command"] + ".ps1") or shutil.which(profile["command"])
     if not executable:
         raise MailBridgeError("Google Workspace provider command is not installed")
     return ["powershell.exe", "-NoProfile", "-File", executable] if executable.lower().endswith(".ps1") else [executable]

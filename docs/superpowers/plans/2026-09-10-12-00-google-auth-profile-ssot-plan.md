@@ -123,8 +123,8 @@ independently usable.
 - Coordination schema: `2`
 - Branch: `master`
 - Base commit: `1b214ae`
-- Plan delivery commit: `01d15ec`; this exact plan revision is the execution contract and must be present in the executor checkout.
-- Expected workspace: `master` at plan delivery commit `01d15ec`, with code comparison base `1b214ae`; preserve these unrelated paths exactly during execution: `.serena/project.yml` (`ECC7D3AD7DB856BDC15FA53CEB99096B7E301A7F469D887F0180DDD8F93EFEF2`), `agents/normal.toml` (`75CC63E3C6CE21EC6D98A034E6191005FF46AD55B1F1400B33453E273082CDED`), `agents/review.toml` (`1C8BCAE300D2FFB6E1E546F6325579023E8BED4FEBAEE32EE867FFAD23E1D494`), `AGENTS.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `CLAUDE.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `GEMINI.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `agents/high.toml` (`994A264864926CE66A2E6590B23690D45AD0D50F2519BF503E1625BA8E6391AE`), `agents/low.toml` (`90ACBE682930C518049F7AAC71503DC3FFD3C93DE33F80D663704CAEA74699BA`), `agents/ui.toml` (`ACBAA8EEBC26198CC1C3F7D50EFCA4712493E5F519A86D62F16F0EF66E50154D`), `agents/xhigh.toml` (`6846962CC4CF95AE037682A02A7D49825259A2552215EBE94074DF6B8AA01844`), `repo_config/publication-config.json` (`BF8899358F82871A4233E829D7C4A4FC7B7D62C3486C92E52998012F88FBC740`), `scripts/new_audit.ps1` (`EF9103075FDFBDE20DFAD11405B6ABE8C15C3FBB48D98B897354BD5B29D29D03`), `scripts/new_brainstorming_report.ps1` (`A1BB7AF6612A4C71231AB072C5622031F35B6DB6F38A16BC9B3BF726A0667612`), `scripts/setup_hooks.ps1` (`7E86E9F02332A277717E230B4D84EA9DBE31031DF703FE2D1617E264B7A19104`), and `scripts/setup_hooks.sh` (`815332A5675B2B4B420EE622B5666B7D04541DF85F5946A7CE6AFB5C48E429B7`); current status/hash inventory is the preservation boundary, and the plan plus named execution targets are the only allowed changes
+- Plan delivery commit: `4798ce9`; this exact plan revision is the execution contract and must be present in the executor checkout.
+- Expected workspace: `master` at plan delivery commit `4798ce9`, with code comparison base `1b214ae`; preserve these unrelated paths exactly during execution: `.serena/project.yml` (`ECC7D3AD7DB856BDC15FA53CEB99096B7E301A7F469D887F0180DDD8F93EFEF2`), `agents/normal.toml` (`75CC63E3C6CE21EC6D98A034E6191005FF46AD55B1F1400B33453E273082CDED`), `agents/review.toml` (`1C8BCAE300D2FFB6E1E546F6325579023E8BED4FEBAEE32EE867FFAD23E1D494`), `AGENTS.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `CLAUDE.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `GEMINI.md` (`7B1D586B9727E9CECCF8EBB017B5F1E6B487C247213A43E0C9EB1A35DD42E9DC`), `agents/high.toml` (`994A264864926CE66A2E6590B23690D45AD0D50F2519BF503E1625BA8E6391AE`), `agents/low.toml` (`90ACBE682930C518049F7AAC71503DC3FFD3C93DE33F80D663704CAEA74699BA`), `agents/ui.toml` (`ACBAA8EEBC26198CC1C3F7D50EFCA4712493E5F519A86D62F16F0EF66E50154D`), `agents/xhigh.toml` (`6846962CC4CF95AE037682A02A7D49825259A2552215EBE94074DF6B8AA01844`), `repo_config/publication-config.json` (`BF8899358F82871A4233E829D7C4A4FC7B7D62C3486C92E52998012F88FBC740`), `scripts/new_audit.ps1` (`EF9103075FDFBDE20DFAD11405B6ABE8C15C3FBB48D98B897354BD5B29D29D03`), `scripts/new_brainstorming_report.ps1` (`A1BB7AF6612A4C71231AB072C5622031F35B6DB6F38A16BC9B3BF726A0667612`), `scripts/setup_hooks.ps1` (`7E86E9F02332A277717E230B4D84EA9DBE31031DF703FE2D1617E264B7A19104`), and `scripts/setup_hooks.sh` (`815332A5675B2B4B420EE622B5666B7D04541DF85F5946A7CE6AFB5C48E429B7`); current status/hash inventory is the preservation boundary, and the plan plus named execution targets are the only allowed changes
 - Review: `PASS` from independent Herdr review lane; review-profile provider failure used approved `normal` fallback
 - Next action: retire completed review pane, create isolated worktree, and dispatch Task 1 through Herdr
 - Blockers: current plan validates; repository-wide validator still reports pre-existing errors in three older plans, out of scope
@@ -132,10 +132,10 @@ independently usable.
 | Task | State | Workspace | Executor | Depends On | Required Proof | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
 | Task 0 | `completed` | current | `codex` | none | planning validator | `repo_config/planning_artifact_schema.yaml` restored |
-| Task 1 | `pending` | current | `unresolved` | Task 0 | registry contract tests | pending |
-| Task 2 | `pending` | current | `unresolved` | Task 1 | preflight failure-state tests and PowerShell syntax | pending |
-| Task 3 | `pending` | current | `unresolved` | Task 2 | canonical docs plus generated-surface drift check | pending |
-| Task 4 | `pending` | current | `unresolved` | Task 3 | focused suite, validator, generation check, diff check | pending |
+| Task 1 | `completed` | isolated | `codex` | Task 0 | registry contract tests | normal profile; 19 focused tests; registry/profile references pass |
+| Task 2 | `completed` | isolated | `codex` | Task 1 | preflight failure-state tests and PowerShell syntax | normal profile; helper envelopes, bridge tests, parser pass; ready and invalid-scope shims pass |
+| Task 3 | `completed` | isolated | `codex` | Task 2 | canonical docs plus generated-surface drift check | normal profile; canonical guidance updated; generated OpenClaw targets match |
+| Task 4 | `completed` | current | `codex` | Task 3 | focused suite, validator, generation check, diff check | 42 tests; generator, validator, compile, parser, diff checks pass |
 
 ## Task Breakdown
 
@@ -223,15 +223,15 @@ independently usable.
 - Stop for: storing secrets or private account data, adding a second auth store, changing provider permissions, or changing mail/calendar capabilities.
 
 **Steps:**
-- [ ] Step 1: Add one `[[auth_profiles]]` entry matching the exact field/type/allowed-value contract above; keep all command and scope facts in this registry entry.
-- [ ] Step 2: Add `auth_profile = "google-workspace"` to `google-workspace`, `mail-runtime`, `calendar-runtime`, `personal`, and `google-calendar`; preserve `provider` as provider identity and leave student Himalaya unlinked.
-- [ ] Step 3: Extend `tool_registry_issues` to reject missing, duplicate, malformed, unsupported, unreferenced, secret-bearing, or mismatched profile references and to enforce the helper JSON contract.
-- [ ] Step 4: Search every tracked canonical/generated `gws auth`, scope, and repair literal; assign executable literals to Task 2, documentation literals to Task 3, and reject every duplicate outside the registry.
-- [ ] Step 5: Add tests proving symmetric Gmail/Calendar references, exact scope preservation, provider/profile distinction, student isolation, unsafe-profile rejection, and secret-field rejection.
-- [ ] Step 6: Prove `mail_mcp_server.py` and `calendar_mcp_server.py` resolve the same registry profile/provider boundary rather than carrying independent Google command or auth policy.
+- [x] Step 1: Add one `[[auth_profiles]]` entry matching the exact field/type/allowed-value contract above; keep all command and scope facts in this registry entry.
+- [x] Step 2: Add `auth_profile = "google-workspace"` to `google-workspace`, `mail-runtime`, `calendar-runtime`, `personal`, and `google-calendar`; preserve `provider` as provider identity and leave student Himalaya unlinked.
+- [x] Step 3: Extend `tool_registry_issues` to reject missing, duplicate, malformed, unsupported, unreferenced, secret-bearing, or mismatched profile references and to enforce the helper JSON contract.
+- [x] Step 4: Search every tracked canonical/generated `gws auth`, scope, and repair literal; assign executable literals to Task 2, documentation literals to Task 3, and reject every duplicate outside the registry.
+- [x] Step 5: Add tests proving symmetric Gmail/Calendar references, exact scope preservation, provider/profile distinction, student isolation, unsafe-profile rejection, and secret-field rejection.
+- [x] Step 6: Prove `mail_mcp_server.py` and `calendar_mcp_server.py` resolve the same registry profile/provider boundary rather than carrying independent Google command or auth policy.
 
 **Verification:**
-- [ ] `python -m unittest tests/test_validate_repo_contracts.py`
+- [x] `python -m unittest tests/test_validate_repo_contracts.py`
 - Expected: registry contract tests pass; malformed profiles fail with actionable validator errors; current registry passes.
 
 **Exit Criteria:**
@@ -275,17 +275,17 @@ independently usable.
 - Stop for: automatic OAuth launch, callback listener management, token inspection, retries beyond one status check, or startup blocking on Google failure.
 
 **Steps:**
-- [ ] Step 1: Add `scripts/read_google_auth_profile.py:load_profile` using stdlib `tomllib`; validate the exact profile contract and implement the documented success/error JSON envelopes, exit codes, empty-stderr rule, and fail-closed redaction behavior.
-- [ ] Step 2: Read profile data through that helper; construct status and repair text from registry values, including `--scopes` from the profile rather than embedding scope literals.
-- [ ] Step 3: Implement the declared precedence for stdout and stderr: missing executable, successful boolean `token_valid = true`, invalid-scope markers, expired/auth markers or boolean `token_valid = false`, then timeout/malformed JSON/exception/other command failure; never print raw provider output. For combined output containing both invalid-scope and expired/auth markers, classify `invalid_scope`. Treat helper exit `2`, exit `3`, malformed helper JSON, missing `profile`, unexpected keys, and non-boolean fields as `provider_unavailable`.
-- [ ] Step 4: Own and remove executable duplicates found in Task 1's search, while keeping one shared `check_google_auth.ps1` call in both startup scripts; update both MCP bridges to consume the same profile/provider contract without duplicating auth policy; prove warning-only behavior and student-mail continuation.
-- [ ] Step 5: Test valid, invalid profile, unavailable registry, expired, invalid-scope, missing executable, provider failure, timeout, malformed JSON, stderr-only failure, thrown exception, non-boolean token status, unexpected helper keys, and secret/callback redaction cases with temporary local shims only; assert exact helper stdout/stderr/exit-code envelopes.
+- [x] Step 1: Add `scripts/read_google_auth_profile.py:load_profile` using stdlib `tomllib`; validate the exact profile contract and implement the documented success/error JSON envelopes, exit codes, empty-stderr rule, and fail-closed redaction behavior.
+- [x] Step 2: Read profile data through that helper; construct status and repair text from registry values, including `--scopes` from the profile rather than embedding scope literals.
+- [x] Step 3: Implement the declared precedence for stdout and stderr: missing executable, successful boolean `token_valid = true`, invalid-scope markers, expired/auth markers or boolean `token_valid = false`, then timeout/malformed JSON/exception/other command failure; never print raw provider output. For combined output containing both invalid-scope and expired/auth markers, classify `invalid_scope`. Treat helper exit `2`, exit `3`, malformed helper JSON, missing `profile`, unexpected keys, and non-boolean fields as `provider_unavailable`.
+- [x] Step 4: Own and remove executable duplicates found in Task 1's search, while keeping one shared `check_google_auth.ps1` call in both startup scripts; update both MCP bridges to consume the same profile/provider contract without duplicating auth policy; prove warning-only behavior and student-mail continuation.
+- [x] Step 5: Test valid, invalid profile, unavailable registry, expired, invalid-scope, missing executable, provider failure, timeout, malformed JSON, stderr-only failure, thrown exception, non-boolean token status, unexpected helper keys, and secret/callback redaction cases with temporary local shims only; assert exact helper stdout/stderr/exit-code envelopes.
 
 **Verification:**
-- [ ] `python -m unittest tests/test_google_auth_profile.py`
-- [ ] `python -m unittest tests/test_mail_mcp_server.py tests/test_calendar_mcp_server.py`
-- [ ] Run preflight with temporary `gws` shims for valid token, expired token, missing `gws`, invalid scope output, and provider command failure.
-- [ ] `powershell -NoProfile -Command "[System.Management.Automation.Language.Parser]::ParseFile('scripts/check_google_auth.ps1',[ref]$null,[ref]$null) | Out-Null"`
+- [x] `python -m unittest tests/test_google_auth_profile.py`
+- [x] `python -m unittest tests/test_mail_mcp_server.py tests/test_calendar_mcp_server.py`
+- [x] Run preflight with temporary `gws` shims for valid token, expired token, missing `gws`, invalid scope output, and provider command failure.
+- [x] `powershell -NoProfile -Command "[System.Management.Automation.Language.Parser]::ParseFile('scripts/check_google_auth.ps1',[ref]$null,[ref]$null) | Out-Null"`
 - Expected: each case emits safe actionable output, only `ready` reports ready, no raw provider secrets or callback URLs appear, and parser returns no errors.
 
 **Exit Criteria:**
@@ -329,14 +329,14 @@ independently usable.
 - Stop for: runtime-specific policy duplication, manual OAuth URL/callback instructions, generated-file direct edits, or changes to Nanobot personal-tool exposure.
 
 **Steps:**
-- [ ] Step 1: Replace README's copied scope command and every documentation-level duplicate with registry-backed preflight guidance; explain one shared profile for Gmail plus Calendar without exposing callback, URL, token, or account data.
-- [ ] Step 2: Update mail recovery guidance to request only the safe profile-backed repair path; retain partial-result and student-mail behavior.
-- [ ] Step 3: Regenerate all runtime surfaces from canonical sources; assert generated auth-profile fields, canonical/generated registry equality including profile references and exact scopes, canonical/generated mail-skill equality, and Nanobot relay-only boundaries.
-- [ ] Step 4: Re-run the full tracked-text search and record that only the registry owns Google login/scope literals and no bare OAuth/callback instruction remains.
+- [x] Step 1: Replace README's copied scope command and every documentation-level duplicate with registry-backed preflight guidance; explain one shared profile for Gmail plus Calendar without exposing callback, URL, token, or account data.
+- [x] Step 2: Update mail recovery guidance to request only the safe profile-backed repair path; retain partial-result and student-mail behavior.
+- [x] Step 3: Regenerate all runtime surfaces from canonical sources; assert generated auth-profile fields, canonical/generated registry equality including profile references and exact scopes, canonical/generated mail-skill equality, and Nanobot relay-only boundaries.
+- [x] Step 4: Re-run the full tracked-text search and record that only the registry owns Google login/scope literals and no bare OAuth/callback instruction remains.
 
 **Verification:**
-- [ ] `python scripts/generate_runtime_surface.py`
-- [ ] `python scripts/generate_runtime_surface.py --check`
+- [x] `python scripts/generate_runtime_surface.py`
+- [x] `python scripts/generate_runtime_surface.py --check`
 - Expected: generated OpenClaw registry contains the single auth profile; canonical skill and generated skill match; no stale duplicated auth command remains.
 
 **Exit Criteria:**
@@ -379,17 +379,17 @@ independently usable.
 - Stop for: provider authentication, real mail/calendar operations, unrelated changes, or any request to clean `.serena/project.yml`.
 
 **Steps:**
-- [ ] Step 1: Run focused registry, generation, and mail-contract tests.
-- [ ] Step 2: Run repository validation and PowerShell syntax checks.
-- [ ] Step 3: Inspect `git diff --check`, changed paths, generated headers, and tracked auth references; record deviations or deferrals.
+- [x] Step 1: Run focused registry, generation, and mail-contract tests.
+- [x] Step 2: Run repository validation and PowerShell syntax checks.
+- [x] Step 3: Inspect `git diff --check`, changed paths, generated headers, and tracked auth references; record deviations or deferrals.
 
 **Verification:**
-- [ ] `python -m unittest tests/test_validate_repo_contracts.py tests/test_google_auth_profile.py tests/test_generate_openclaw_surface.py tests/test_mail_mcp_server.py`
-- [ ] `python scripts/generate_runtime_surface.py --check`
-- [ ] `python scripts/validate_repo_contracts.py`
-- [ ] `python -m py_compile scripts/validate_repo_contracts.py scripts/mail_mcp_server.py scripts/calendar_mcp_server.py`
-- [ ] PowerShell parser check for `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, and `scripts/start_openclaw.ps1`
-- [ ] `git diff --check`
+- [x] `python -m unittest tests/test_validate_repo_contracts.py tests/test_google_auth_profile.py tests/test_generate_openclaw_surface.py tests/test_mail_mcp_server.py`
+- [x] `python scripts/generate_runtime_surface.py --check`
+- [x] `python scripts/validate_repo_contracts.py`
+- [x] `python -m py_compile scripts/validate_repo_contracts.py scripts/read_google_auth_profile.py scripts/mail_mcp_server.py scripts/calendar_mcp_server.py`
+- [x] PowerShell parser check for `scripts/check_google_auth.ps1`, `scripts/start_nanobot.ps1`, and `scripts/start_openclaw.ps1`
+- [x] `git diff --check`
 - Expected: all checks pass; generated output is current; no secret/callback data appears; stderr, exception, malformed-input, timeout, and student-isolation proofs pass; `.serena/project.yml` and all unrelated files remain preserved.
 
 **Exit Criteria:**

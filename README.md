@@ -56,21 +56,14 @@ NANOBOT_TELEGRAM_BOT_TOKEN=<Nanobot token>
 OPENCLAW_TELEGRAM_BOT_TOKEN=<OpenClaw token>
 ```
 
-Before starting either bot, check Google Workspace auth:
+Before starting either bot, check Google Workspace auth through registry-backed preflight:
 
 ```powershell
-gws auth status
+./scripts/check_google_auth.ps1
 ```
 
-If `token_valid` is not `true`, repair the shared mail/calendar token with
-Gmail read-only and Calendar scopes:
-
-```powershell
-gws auth login --scopes 'https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/calendar'
-```
-
-Do not use bare `gws auth login`; broad scope presets can fail for personal
-Gmail accounts. Bot startup runs this check and warns without blocking
+If auth is unavailable, use repair command emitted by preflight. Do not run
+provider login commands outside registry-backed guidance. Bot startup warns without blocking
 student-only mail access.
 
 Nanobot control uses `NANOBOT_TELEGRAM_BOT_TOKEN` from shared `.env` loader:

@@ -24,6 +24,18 @@ capabilities = [
   "web.search"
 ]
 
+[[auth_profiles]]
+id = "google-workspace"
+provider = "google-workspace"
+command = "gws"
+status_args = ["auth", "status"]
+login_args = ["auth", "login"]
+scopes = [
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/calendar"
+]
+redact_output = true
+
 [[tools]]
 id = "google-workspace"
 domains = ["calendar"]
@@ -36,6 +48,7 @@ capabilities = [
 auth = "provider-native"
 status = "runtime"
 command = "gws.ps1"
+auth_profile = "google-workspace"
 
 [[tools]]
 id = "calendar-runtime"
@@ -51,6 +64,7 @@ status = "runtime"
 expose_to = ["personal-cos"]
 launch_kind = "python-script"
 script = "scripts/calendar_mcp_server.py"
+auth_profile = "google-workspace"
 
 [[tools]]
 id = "himalaya"
@@ -78,6 +92,7 @@ expose_to = ["personal-cos"]
 launch_kind = "python-script"
 script = "scripts/mail_mcp_server.py"
 read_only = true
+auth_profile = "google-workspace"
 
 [[tools]]
 id = "personal-os-scheduler"
@@ -123,6 +138,7 @@ id = "personal"
 domain = "mail"
 tool = "mail-runtime"
 provider = "google-workspace"
+auth_profile = "google-workspace"
 
 [[accounts]]
 id = "student"
@@ -136,3 +152,4 @@ id = "google-calendar"
 domain = "calendar"
 tool = "calendar-runtime"
 provider = "google-workspace"
+auth_profile = "google-workspace"

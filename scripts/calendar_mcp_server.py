@@ -9,6 +9,7 @@ import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
+from read_google_auth_profile import load_profile
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
@@ -54,12 +55,15 @@ def _calendar_account() -> dict[str, Any]:
     registry = tomllib.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
     for account in registry.get("accounts", []):
         if account.get("domain") == "calendar" and account.get("id") == "google-calendar":
+            if account.get("provider") != "google-workspace" or account.get("auth_profile") != load_profile(REGISTRY_PATH)["id"]:
+                break
             return account
     raise CalendarBridgeError("Google Calendar account is not registered")
 
 
 def _gws_command() -> list[str]:
-    executable = shutil.which("gws.ps1") or shutil.which("gws")
+    profile = load_profile(REGISTRY_PATH)
+    executable = shutil.which(profile["command"] + ".ps1") or shutil.which(profile["command"])
     if not executable:
         raise CalendarBridgeError("Google Workspace provider command is not installed")
     return ["powershell.exe", "-NoProfile", "-File", executable] if executable.lower().endswith(".ps1") else [executable]

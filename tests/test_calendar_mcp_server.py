@@ -10,6 +10,9 @@ import calendar_mcp_server as calendar
 
 
 class CalendarMcpServerTests(unittest.TestCase):
+    def test_registry_owns_google_auth_profile(self):
+        self.assertEqual(calendar._calendar_account()["auth_profile"], "google-workspace")
+
     def test_search_builds_time_range_request(self):
         with patch.object(calendar, "_gws_call", return_value={"items": []}) as call:
             result = calendar.calendar_search(

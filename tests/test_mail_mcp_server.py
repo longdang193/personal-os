@@ -25,6 +25,7 @@ class MailMcpServerTests(unittest.TestCase):
 
     def test_registry_owns_mail_provider_mapping(self):
         self.assertEqual(mail._account_config("personal")["provider"], "google-workspace")
+        self.assertEqual(mail._account_config("personal")["auth_profile"], "google-workspace")
         self.assertEqual(mail._account_config("student")["provider_account"], "ovgu")
 
     def test_digest_search_has_bounded_default(self):

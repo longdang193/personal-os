@@ -49,9 +49,9 @@ Use `skill-mail-management` in digest mode when the user asks for a mail digest,
 - State which accounts succeeded and which failed; never infer that a failed account has no mail.
 - If authentication fails, report re-authentication as the blocker and do not retry repeatedly, inspect credentials, or substitute stale context.
 - The registered mail runtime has no authentication, callback-listener, or browser-login capability. Never invent OAuth URLs, localhost ports, listener commands, consent state, token-storage diagnoses, or success claims.
-- For personal Gmail recovery, provide only the verified command `gws auth login --scopes 'https://www.googleapis.com/auth/gmail.readonly,https://www.googleapis.com/auth/calendar'`. This preserves Calendar access in the shared `gws` token while keeping Gmail read-only.
-- Do not use bare `gws auth login` or broad scope presets; they can request unsupported Workspace admin scopes for personal Gmail accounts.
-- After one failed recheck, state that this bot cannot restart provider authentication; ask the user to run the verified Gmail recovery command locally, then retry mail search.
+- For personal Gmail recovery, run the registry-backed `scripts/check_google_auth.ps1` preflight. It preserves Calendar access in the shared Google Workspace profile while keeping Gmail read-only.
+- Do not invent provider login commands or broad scope presets; use only repair guidance emitted by the registry-backed preflight.
+- After one failed recheck, state that this bot cannot restart provider authentication; ask the user to run the registry-backed preflight locally, follow its repair output, then retry mail search.
 - If status is `failed`, return the blocker instead of presenting an empty digest.
 - Keep successful account results when status is `partial`; preserve read-only behavior and state that no mail changed.
 
