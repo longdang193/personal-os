@@ -8,6 +8,7 @@ name: google-auth-profile-ssot
 targets:
   - agents/review.toml
   - agents/normal.toml
+  - repo_config/planning_artifact_schema.yaml
   - repo_config/tool_registry.toml
   - scripts/validate_repo_contracts.py
   - scripts/read_google_auth_profile.py
@@ -88,12 +89,58 @@ and absence of secret or callback data in output paths.
 
 | Task | State | Workspace | Executor | Depends On | Required Proof | Evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| Task 1 | `pending` | current | `unresolved` | none | registry contract tests | pending |
+| Task 0 | `completed` | current | `codex` | none | planning validator | `repo_config/planning_artifact_schema.yaml` restored |
+| Task 1 | `pending` | current | `unresolved` | Task 0 | registry contract tests | pending |
 | Task 2 | `pending` | current | `unresolved` | Task 1 | preflight failure-state tests and PowerShell syntax | pending |
 | Task 3 | `pending` | current | `unresolved` | Task 2 | canonical docs plus generated-surface drift check | pending |
 | Task 4 | `pending` | current | `unresolved` | Task 3 | focused suite, validator, generation check, diff check | pending |
 
 ## Task Breakdown
+
+### Task 0: Restore planning validation schema
+
+**Purpose:**
+- Restore required repository validation input before delegated work begins.
+
+**Task Function:**
+- Coordination prerequisite repair.
+
+**Template Profile:**
+- Controller-selected: `<none (lead controller)>`
+- Selection basis: exact canonical schema is available in sibling Project OS repositories with matching content hash.
+
+**Validator Profile:**
+- Controller-selected: `<none>`
+- Selection basis: shared lifecycle validator is the direct proof.
+
+**Specification Coverage:**
+- Git-tracked plan validation and safe CoS dispatch gate.
+
+**Required Skills:**
+- `none`
+
+**Files And Symbols:**
+- Inspect: `C:\Users\HOANG PHI LONG DANG\repos\project-OS-starter\repo_config\planning_artifact_schema.yaml`, shared `planning_artifact_schema.py`
+- Modify: `repo_config/planning_artifact_schema.yaml`
+- Verify: shared repository and planning validators
+
+**Dependencies:**
+- Existing repository plans and shared Project OS validation contract.
+
+**Authority:**
+- Preauthorized local actions: restore exact non-secret validation schema and run local validator checks.
+- Stop for: schema redesign, unrelated config migration, or changes outside the named file.
+
+**Steps:**
+- [x] Step 1: Restore schema with SHA-256 matching `project-OS-starter` and `JOB-PROJECT` copies.
+- [x] Step 2: Re-run planning and repository contract validation.
+
+**Verification:**
+- [x] `py -B C:\Users\HOANG PHI LONG DANG\.agents\project-os\scripts\validate_planning_lifecycle.py --repo-root .`
+- Expected: existing plan artifacts parse and active plan contract validates.
+
+**Exit Criteria:**
+- Required planning schema exists, matches known canonical content, and validation gate can run.
 
 ### Task 1: Define and validate shared auth profile
 
