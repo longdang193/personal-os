@@ -85,6 +85,11 @@ Nanobot is relay-only: each Telegram request runs the local
 read Personal OS memory, access repositories, or call Herdr. No CoS URL or auth
 token is configured; Herdr remains internal to CoS and Project OS.
 
+Nanobot exposes one runtime skill root through
+`PERSONAL_OS_RUNTIME_SKILL_ROOT`. Requests naming `/skill-name` or `skill
+skill-name` load only that skill directory. Add runtime skills there once;
+canonical Personal OS skills remain in `.agents/skills/`.
+
 Use `repository_id = personal-os` or `repository_id = job-project` when a
 request targets a registered repository. Roots stay in ignored `.env` through
 `PERSONAL_OS_ROOT` and `JOB_PROJECT_ROOT`.

@@ -94,9 +94,17 @@ class ValidateRepoContractsTests(unittest.TestCase):
             script = (ROOT / "scripts" / script_name).read_text(encoding="utf-8")
             self.assertIn("check_google_auth.ps1", script)
         self.assertIn("status_args", helper)
-        self.assertIn("\"token_valid\"", helper)
+        self.assertIn("token_valid", helper)
         self.assertIn("read_google_auth_profile.py", helper)
         self.assertNotIn("gmail.readonly", helper)
+
+    def test_auth_repair_guidance_separates_scopes(self):
+        helper = (ROOT / "scripts" / "check_google_auth.ps1").read_text(encoding="utf-8")
+        self.assertIn('Write-Output "  `$scopes = @("', helper)
+        self.assertIn("foreach ($scope in @($profile.scopes))", helper)
+        self.assertIn('Write-Output "    \'$scope\'"', helper)
+        self.assertIn("--scopes (`$scopes -join ',')", helper)
+        self.assertNotIn('$scopes = (@($profile.scopes) -join ",")', helper)
 
     def test_student_mail_provider_is_read_only(self):
         skill = (ROOT / ".agents" / "skills" / "skill-mail-management" / "SKILL.md").read_text(

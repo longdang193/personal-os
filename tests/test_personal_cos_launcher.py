@@ -242,6 +242,24 @@ class PersonalCosLauncherTests(unittest.TestCase):
         self.assertEqual(command[sandbox_index + 1], "read-only")
         self.assertNotIn("--add-dir", command)
 
+    def test_runtime_skill_is_injected_only_when_explicitly_requested(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            skill_dir = Path(temp_dir) / "new-skill"
+            skill_dir.mkdir()
+            (skill_dir / "SKILL.md").write_text("runtime skill contract", encoding="utf-8")
+            envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "Do you have skill new-skill?"}
+            with patch.dict(launcher.os.environ, {launcher.RUNTIME_SKILL_ROOT_ENV: temp_dir}, clear=False):
+                value = launcher.codex_input(envelope)
+                command = launcher.codex_command(ROOT, access_mode="read", runtime_skill_dir=launcher.requested_runtime_skill_path(envelope["text"]))
+
+        self.assertIn("runtime skill contract", value)
+        self.assertIn(str(skill_dir), value)
+        self.assertEqual(command[command.index("--add-dir") + 1], str(skill_dir))
+
+    def test_runtime_skill_request_supports_slash_commands(self):
+        self.assertEqual(launcher.requested_runtime_skill_name("/new-skill AI"), "new-skill")
+        self.assertIsNone(launcher.requested_runtime_skill_name("research last 30 days"))
+
     def test_codex_input_points_to_canonical_skill_root(self):
         envelope = {"version": "personal.edge.v1", "request_id": "request-1", "text": "hello"}
         with patch.object(launcher, "load_env", return_value={"OBSIDIAN_VAULT": str(ROOT)}):

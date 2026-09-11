@@ -27,21 +27,24 @@ $gws = Get-Command ($profile.command + ".ps1") -ErrorAction SilentlyContinue
 if (-not $gws) { $gws = Get-Command $profile.command -ErrorAction SilentlyContinue }
 $state = "missing"
 if ($gws) {
-    $output = (& $gws.Source @($profile.status_args) 2>&1 | Out-String)
+    $statusArgs = @($profile.status_args)
+    $output = (& $gws.Source @statusArgs 2>&1 | Out-String)
     $exitCode = $LASTEXITCODE
-    $normalized = [regex]::Replace($output, "`e\[[0-9;]*[A-Za-z]", "").ToLowerInvariant()
     $state = "provider_unavailable"
-    if ($normalized -match "invalid_scope|invalid scope|scope name is invalid|unsupported scope|outside the domain of this legacy api") {
-        $state = "invalid_scope"
-    } elseif ($normalized -match "token expired|invalid_grant|authentication failed|auth required|credential|permission denied") {
-        $state = "expired"
-    } elseif ($exitCode -eq 0) {
+    $json = [regex]::Match($output, "(?s)\{.*\}\s*$")
+    if ($exitCode -eq 0 -and $json.Success) {
         try {
-            $status = $output | ConvertFrom-Json
-            if ($output -match '"token_valid"\s*:') {
-                if ($status.token_valid -is [bool]) { $state = if ($status.token_valid) { "ready" } else { "expired" } }
-            }
+            $status = $json.Value | ConvertFrom-Json
+            if ($status.token_valid -is [bool]) { $state = if ($status.token_valid) { "ready" } else { "expired" } }
         } catch {}
+    }
+    if ($state -eq "provider_unavailable") {
+        $normalized = [regex]::Replace($output, "`e\[[0-9;]*[A-Za-z]", "").ToLowerInvariant()
+        if ($normalized -match "invalid_scope|invalid scope|scope name is invalid|unsupported scope|outside the domain of this legacy api") {
+            $state = "invalid_scope"
+        } elseif ($normalized -match "token expired|invalid_grant|authentication failed|auth required|credentials?\s+(?:expired|invalid|missing)|permission denied") {
+            $state = "expired"
+        }
     }
 }
 
@@ -51,7 +54,12 @@ if ($state -eq "ready") {
     Write-Warning "Google Workspace CLI not found; personal mail and calendar may fail."
 } else {
     Write-Warning "Google Workspace auth unavailable; personal mail and calendar may fail."
-    $scopes = (@($profile.scopes) -join ",")
-    $repair = (@($profile.login_args) + @("--scopes", $scopes)) -join " "
-    Write-Warning "Repair with: $($profile.command) $repair"
+    Write-Output "Repair with:"
+    Write-Output "  `$scopes = @("
+    foreach ($scope in @($profile.scopes)) {
+        Write-Output "    '$scope'"
+    }
+    Write-Output "  )"
+    $login = @($profile.login_args) -join " "
+    Write-Output "  $($profile.command) $login --scopes (`$scopes -join ',')"
 }

@@ -18,6 +18,11 @@ ROOT = Path(__file__).resolve().parents[1]
 PROJECT_REGISTRY_PATH = ROOT / "repo_config" / "project_registry.toml"
 TOOL_REGISTRY_PATH = ROOT / "repo_config" / "tool_registry.toml"
 SKILL_ROOT = ROOT / ".agents" / "skills"
+RUNTIME_SKILL_ROOT_ENV = "PERSONAL_OS_RUNTIME_SKILL_ROOT"
+RUNTIME_SKILL_REQUEST = re.compile(
+    r"(?:^|\s)/(?P<command>[A-Za-z0-9][A-Za-z0-9_-]*)|\bskills?\s+(?P<name>[A-Za-z0-9][A-Za-z0-9_-]*)\b",
+    re.IGNORECASE,
+)
 ENV_LINE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$")
 ACCESS_MODES = {"read", "write"}
 SESSION_DIR = Path(os.environ.get("PERSONAL_OS_SESSION_DIR", Path.home() / ".personal-os" / "sessions"))
@@ -181,6 +186,27 @@ def configured_obsidian_vault() -> Path | None:
     return vault if vault.is_dir() else None
 
 
+def requested_runtime_skill_name(text: str) -> str | None:
+    match = RUNTIME_SKILL_REQUEST.search(text)
+    return match.group("command") or match.group("name") if match else None
+
+
+def requested_runtime_skill_path(text: str) -> Path | None:
+    name = requested_runtime_skill_name(text)
+    if not name:
+        return None
+    raw_root = os.environ.get(RUNTIME_SKILL_ROOT_ENV, "").strip()
+    if not raw_root:
+        return None
+    root = Path(raw_root).expanduser().resolve()
+    skill = (root / name).resolve()
+    try:
+        skill.relative_to(root)
+    except ValueError:
+        return None
+    return skill if (skill / "SKILL.md").is_file() else None
+
+
 def resolve_project_root(envelope: dict[str, Any]) -> tuple[str, Path]:
     project_id = envelope.get("repository_id") or "personal-os"
     if not isinstance(project_id, str):
@@ -260,7 +286,12 @@ def content_watch_context(text: str) -> str:
     )
 
 
-def codex_command(root: Path, *, access_mode: str = "write") -> list[str]:
+def codex_command(
+    root: Path,
+    *,
+    access_mode: str = "write",
+    runtime_skill_dir: Path | None = None,
+) -> list[str]:
     if access_mode not in ACCESS_MODES:
         raise ValueError(f"unsupported access_mode: {access_mode}")
     sandbox = "read-only" if access_mode == "read" else "workspace-write"
@@ -329,6 +360,8 @@ def codex_command(root: Path, *, access_mode: str = "write") -> list[str]:
     vault = configured_obsidian_vault()
     if vault and access_mode == "write":
         command.extend(["--add-dir", str(vault)])
+    if runtime_skill_dir:
+        command.extend(["--add-dir", str(runtime_skill_dir)])
     command.extend(["--cd", str(root), "-"])
     return command
 
@@ -344,6 +377,23 @@ def codex_input(
         planner_skill = planner_skill_path.read_text(encoding="utf-8")
     except OSError as error:
         raise ValueError(f"canonical daily planner skill unavailable: {error}") from error
+    runtime_skill_name = requested_runtime_skill_name(envelope["text"])
+    runtime_skill_path = requested_runtime_skill_path(envelope["text"])
+    runtime_skill = ""
+    if runtime_skill_name and runtime_skill_path:
+        try:
+            runtime_skill = (
+                f"Explicit runtime skill requested: `{runtime_skill_name}`. Read and follow this "
+                f"runtime-local skill at `{runtime_skill_path}`; do not substitute generic research.\n"
+                f"{(runtime_skill_path / 'SKILL.md').read_text(encoding='utf-8')}\n\n"
+            )
+        except OSError as error:
+            runtime_skill = f"Requested runtime skill `{runtime_skill_name}` could not be read: {error}\n\n"
+    elif runtime_skill_name:
+        runtime_skill = (
+            f"Requested runtime skill `{runtime_skill_name}` is unavailable in the configured "
+            f"runtime skill root `{os.environ.get(RUNTIME_SKILL_ROOT_ENV, '')}`.\n\n"
+        )
     if vault:
         vault_context = (
             f"- Obsidian vault root for planner writes is exactly {vault}.\n"
@@ -363,6 +413,7 @@ def codex_input(
         f"{format_session_context(session_context if session_context is not None else load_session_context(envelope.get('conversation_id')))}"
         f"Edge request envelope:\n{json.dumps(envelope, ensure_ascii=False)}\n\n"
         f"{content_context}"
+        f"{runtime_skill}"
         "Mandatory applicable skill: skill-daily-planner\n"
         "Follow this canonical skill for planning, task, daily-note, calendar, "
         "and reminder requests. Do not replace it with generic behavior.\n"
@@ -390,12 +441,17 @@ def run(envelope: dict[str, Any]) -> int:
     emit(event(request_id, sequence, "accepted", f"CoS turn started in {project_id}"))
     sequence += 1
     content_context = content_watch_context(envelope["text"])
+    runtime_skill_dir = requested_runtime_skill_path(envelope["text"])
     child_env = os.environ.copy()
     configured_vault = configured_obsidian_vault()
     if configured_vault and "OBSIDIAN_VAULT" not in child_env:
         child_env["OBSIDIAN_VAULT"] = str(configured_vault)
     process = subprocess.run(
-        codex_command(root, access_mode=envelope.get("access_mode", "read")),
+        codex_command(
+            root,
+            access_mode=envelope.get("access_mode", "read"),
+            runtime_skill_dir=runtime_skill_dir,
+        ),
         input=codex_input(envelope, session_context, content_context),
         text=True,
         encoding="utf-8",
